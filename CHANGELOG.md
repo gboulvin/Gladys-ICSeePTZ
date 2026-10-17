@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-17
+
 ### Added
 
 - Local control of the iCSee / XMEye cameras through their native DVRIP
@@ -34,3 +36,6 @@ the notes of the version's GitHub Release.
   otherwise.
 - English, French, German and Spanish texts and user documentation.
 - `SECURITY.md`, `CLAUDE.md`, CI on Node 22 and 24, release workflows.
+
+[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/releases/tag/v1.0.0
