@@ -1,0 +1,768 @@
+{
+  "manifest_version": 1,
+  "type": "device",
+  "name": "iCSee PTZ",
+  "description": {
+    "en": "Control your iCSee / XMEye PTZ cameras locally: image, pan-tilt, presets, motion.",
+    "fr": "Pilotez vos caméras PTZ iCSee / XMEye en local : image, orientation, presets, mouvement.",
+    "de": "Steuern Sie Ihre iCSee/XMEye-PTZ-Kameras lokal: Bild, Schwenken, Presets, Bewegung.",
+    "es": "Controle sus cámaras PTZ iCSee / XMEye en local: imagen, orientación, presets, movimiento."
+  },
+  "version": "0.0.0",
+  "docker_image": "ghcr.io/gboulvin/gladys-icseeptz:0.0.0",
+  "gladys_version": ">=5.1.0",
+  "cover_image": "https://raw.githubusercontent.com/gboulvin/Gladys-ICSeePTZ/main/cover.png",
+  "categories": ["security", "multimedia"],
+  "transports": ["local"],
+  "network_discovery": [{ "type": "udp-active-broadcast", "ports": [34569] }],
+  "config_schema": [
+    {
+      "key": "intro",
+      "type": "section",
+      "label": {
+        "en": "Getting started",
+        "fr": "Pour commencer",
+        "de": "Erste Schritte",
+        "es": "Primeros pasos"
+      },
+      "description": {
+        "en": "Pair your cameras with the iCSee app first, then give them a fixed address in your router. The integration talks to them directly on your local network (DVRIP protocol, TCP port 34567): no cloud account is needed. Use \"Search the network\" below to find their addresses.",
+        "fr": "Associez d'abord vos caméras avec l'application iCSee, puis donnez-leur une adresse fixe dans votre box. L'intégration leur parle directement sur votre réseau local (protocole DVRIP, port TCP 34567) : aucun compte cloud n'est nécessaire. Utilisez « Rechercher sur le réseau » ci-dessous pour trouver leurs adresses.",
+        "de": "Koppeln Sie Ihre Kameras zuerst mit der iCSee-App und geben Sie ihnen in Ihrem Router eine feste Adresse. Die Integration spricht direkt in Ihrem lokalen Netzwerk mit ihnen (DVRIP-Protokoll, TCP-Port 34567): Es ist kein Cloud-Konto nötig. Mit „Netzwerk durchsuchen“ unten finden Sie ihre Adressen.",
+        "es": "Vincule primero sus cámaras con la app iCSee y asígneles una dirección fija en su router. La integración se comunica con ellas directamente en su red local (protocolo DVRIP, puerto TCP 34567): no hace falta ninguna cuenta en la nube. Use «Buscar en la red» más abajo para encontrar sus direcciones."
+      },
+      "links": [
+        {
+          "url": "https://github.com/gboulvin/Gladys-ICSeePTZ#readme",
+          "label": {
+            "en": "Project page",
+            "fr": "Page du projet",
+            "de": "Projektseite",
+            "es": "Página del proyecto"
+          }
+        }
+      ]
+    },
+    {
+      "key": "hosts",
+      "type": "string",
+      "label": {
+        "en": "Camera addresses",
+        "fr": "Adresses des caméras",
+        "de": "Kamera-Adressen",
+        "es": "Direcciones de las cámaras"
+      },
+      "description": {
+        "en": "IP addresses of the cameras, separated by commas. Add \":port\" if it is not 34567.",
+        "fr": "Adresses IP des caméras, séparées par des virgules. Ajoutez « :port » s'il n'est pas 34567.",
+        "de": "IP-Adressen der Kameras, durch Kommas getrennt. Fügen Sie „:Port“ hinzu, wenn er nicht 34567 ist.",
+        "es": "Direcciones IP de las cámaras, separadas por comas. Añada «:puerto» si no es 34567."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.50, 192.168.1.51",
+        "fr": "ex. 192.168.1.50, 192.168.1.51",
+        "de": "z. B. 192.168.1.50, 192.168.1.51",
+        "es": "p. ej. 192.168.1.50, 192.168.1.51"
+      },
+      "required": true
+    },
+    {
+      "key": "username",
+      "type": "string",
+      "label": {
+        "en": "Username",
+        "fr": "Nom d'utilisateur",
+        "de": "Benutzername",
+        "es": "Usuario"
+      },
+      "description": {
+        "en": "Local account of the cameras, \"admin\" unless you changed it.",
+        "fr": "Compte local des caméras, « admin » sauf si vous l'avez changé.",
+        "de": "Lokales Konto der Kameras, „admin“, sofern Sie es nicht geändert haben.",
+        "es": "Cuenta local de las cámaras, «admin» salvo que la haya cambiado."
+      },
+      "placeholder": { "en": "admin", "fr": "admin", "de": "admin", "es": "admin" },
+      "required": true,
+      "default": "admin"
+    },
+    {
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "description": {
+        "en": "Device password set in the iCSee app. Leave empty if you never set one.",
+        "fr": "Mot de passe de l'appareil défini dans l'application iCSee. Laissez vide si vous n'en avez jamais défini.",
+        "de": "In der iCSee-App festgelegtes Gerätepasswort. Leer lassen, wenn Sie nie eines festgelegt haben.",
+        "es": "Contraseña del dispositivo definida en la app iCSee. Déjela vacía si nunca la definió."
+      },
+      "required": false
+    },
+    {
+      "key": "snapshot_interval",
+      "type": "number",
+      "label": {
+        "en": "Image refresh (s)",
+        "fr": "Rafraîchissement de l'image (s)",
+        "de": "Bildaktualisierung (s)",
+        "es": "Actualización de la imagen (s)"
+      },
+      "description": {
+        "en": "Seconds between two images sent to Gladys (5 minimum). 0 only captures on demand.",
+        "fr": "Secondes entre deux images envoyées à Gladys (5 minimum). 0 : capture à la demande uniquement.",
+        "de": "Sekunden zwischen zwei an Gladys gesendeten Bildern (mindestens 5). 0: nur bei Bedarf.",
+        "es": "Segundos entre dos imágenes enviadas a Gladys (mínimo 5). 0: solo bajo demanda."
+      },
+      "required": false,
+      "default": 60,
+      "min": 0,
+      "max": 3600
+    },
+    {
+      "key": "snapshot_source",
+      "type": "select",
+      "label": {
+        "en": "Image capture",
+        "fr": "Capture de l'image",
+        "de": "Bilderfassung",
+        "es": "Captura de la imagen"
+      },
+      "description": {
+        "en": "Automatic uses the camera snapshot, and the RTSP stream when the firmware has none.",
+        "fr": "Automatique utilise la capture de la caméra, et le flux RTSP si le firmware n'en a pas.",
+        "de": "Automatisch nutzt den Schnappschuss der Kamera und den RTSP-Stream, wenn die Firmware keinen hat.",
+        "es": "Automático usa la captura de la cámara, y el flujo RTSP si el firmware no la tiene."
+      },
+      "required": false,
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic",
+            "fr": "Automatique",
+            "de": "Automatisch",
+            "es": "Automático"
+          }
+        },
+        {
+          "value": "dvrip",
+          "label": {
+            "en": "Camera snapshot",
+            "fr": "Capture de la caméra",
+            "de": "Kamera-Schnappschuss",
+            "es": "Captura de la cámara"
+          }
+        },
+        {
+          "value": "rtsp",
+          "label": {
+            "en": "RTSP stream",
+            "fr": "Flux RTSP",
+            "de": "RTSP-Stream",
+            "es": "Flujo RTSP"
+          }
+        }
+      ]
+    },
+    {
+      "key": "move_duration",
+      "type": "number",
+      "label": {
+        "en": "Move step (s)",
+        "fr": "Pas de déplacement (s)",
+        "de": "Bewegungsschritt (s)",
+        "es": "Paso de movimiento (s)"
+      },
+      "description": {
+        "en": "How long a single move command turns the camera (0.2 to 5 s). Holding a button keeps moving up to 5 s.",
+        "fr": "Durée de rotation d'une commande de déplacement isolée (0,2 à 5 s). Un bouton maintenu tourne jusqu'à 5 s.",
+        "de": "Wie lange ein einzelner Bewegungsbefehl die Kamera dreht (0,2 bis 5 s). Gedrückt halten bewegt bis zu 5 s.",
+        "es": "Cuánto gira la cámara con una orden de movimiento aislada (0,2 a 5 s). Mantener pulsado mueve hasta 5 s."
+      },
+      "required": false,
+      "default": 1,
+      "min": 0.2,
+      "max": 5
+    },
+    {
+      "key": "ptz_speed",
+      "type": "number",
+      "label": {
+        "en": "Motor speed (1-8)",
+        "fr": "Vitesse du moteur (1-8)",
+        "de": "Motorgeschwindigkeit (1-8)",
+        "es": "Velocidad del motor (1-8)"
+      },
+      "required": false,
+      "default": 5,
+      "min": 1,
+      "max": 8
+    },
+    {
+      "key": "zoom",
+      "type": "boolean",
+      "label": {
+        "en": "Motorized zoom",
+        "fr": "Zoom motorisé",
+        "de": "Motorisierter Zoom",
+        "es": "Zoom motorizado"
+      },
+      "description": {
+        "en": "Offer the zoom in / zoom out controls (only for models with an optical zoom).",
+        "fr": "Propose les commandes de zoom avant / arrière (modèles à zoom optique uniquement).",
+        "de": "Zeigt die Zoom-Steuerung an (nur für Modelle mit optischem Zoom).",
+        "es": "Ofrece los controles de zoom (solo modelos con zoom óptico)."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "presets",
+      "type": "string",
+      "label": {
+        "en": "Presets",
+        "fr": "Presets",
+        "de": "Presets",
+        "es": "Presets"
+      },
+      "description": {
+        "en": "Positions saved on the cameras, as slot:name pairs. Save new ones with the \"Save a preset\" scene action.",
+        "fr": "Positions enregistrées sur les caméras, sous la forme numéro:nom. Enregistrez-en avec l'action de scène « Enregistrer un preset ».",
+        "de": "Auf den Kameras gespeicherte Positionen als Nummer:Name. Neue speichern Sie mit der Szenenaktion „Preset speichern“.",
+        "es": "Posiciones guardadas en las cámaras, como número:nombre. Guarde nuevas con la acción de escena «Guardar un preset»."
+      },
+      "placeholder": {
+        "en": "e.g. 1:Entrance, 2:Garden",
+        "fr": "ex. 1:Entrée, 2:Jardin",
+        "de": "z. B. 1:Eingang, 2:Garten",
+        "es": "p. ej. 1:Entrada, 2:Jardín"
+      },
+      "required": false,
+      "default": ""
+    },
+    {
+      "key": "motion_events",
+      "type": "boolean",
+      "label": {
+        "en": "Motion detection",
+        "fr": "Détection de mouvement",
+        "de": "Bewegungserkennung",
+        "es": "Detección de movimiento"
+      },
+      "description": {
+        "en": "Receive the motion and person detections of the cameras (enable them in the iCSee app).",
+        "fr": "Reçoit les détections de mouvement et de personne des caméras (activez-les dans l'application iCSee).",
+        "de": "Empfängt die Bewegungs- und Personenerkennungen der Kameras (aktivieren Sie sie in der iCSee-App).",
+        "es": "Recibe las detecciones de movimiento y de personas de las cámaras (actívelas en la app iCSee)."
+      },
+      "required": false,
+      "default": true
+    }
+  ],
+  "actions": [
+    {
+      "key": "test_connection",
+      "label": {
+        "en": "Test the cameras",
+        "fr": "Tester les caméras",
+        "de": "Kameras testen",
+        "es": "Probar las cámaras"
+      },
+      "description": {
+        "en": "Connect to every saved camera address with the saved credentials.",
+        "fr": "Se connecte à chaque adresse enregistrée avec les identifiants enregistrés.",
+        "de": "Verbindet sich mit jeder gespeicherten Adresse mit den gespeicherten Zugangsdaten.",
+        "es": "Se conecta a cada dirección guardada con las credenciales guardadas."
+      },
+      "timeout_seconds": 30
+    },
+    {
+      "key": "discover_cameras",
+      "label": {
+        "en": "Search the network",
+        "fr": "Rechercher sur le réseau",
+        "de": "Netzwerk durchsuchen",
+        "es": "Buscar en la red"
+      },
+      "description": {
+        "en": "List the iCSee cameras answering on your local network.",
+        "fr": "Liste les caméras iCSee qui répondent sur votre réseau local.",
+        "de": "Listet die iCSee-Kameras auf, die in Ihrem lokalen Netzwerk antworten.",
+        "es": "Enumera las cámaras iCSee que responden en su red local."
+      },
+      "timeout_seconds": 30
+    },
+    {
+      "key": "reboot_camera",
+      "label": {
+        "en": "Restart a camera",
+        "fr": "Redémarrer une caméra",
+        "de": "Kamera neu starten",
+        "es": "Reiniciar una cámara"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ]
+    }
+  ],
+  "scene_triggers": [
+    {
+      "key": "motion_detected",
+      "label": {
+        "en": "iCSee camera: detection",
+        "fr": "Caméra iCSee : détection",
+        "de": "iCSee-Kamera: Erkennung",
+        "es": "Cámara iCSee: detección"
+      },
+      "description": {
+        "en": "A camera detected a motion or a person.",
+        "fr": "Une caméra a détecté un mouvement ou une personne.",
+        "de": "Eine Kamera hat eine Bewegung oder eine Person erkannt.",
+        "es": "Una cámara ha detectado un movimiento o una persona."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" }
+        },
+        {
+          "key": "detection",
+          "type": "multi_select",
+          "label": {
+            "en": "Detection",
+            "fr": "Détection",
+            "de": "Erkennung",
+            "es": "Detección"
+          },
+          "options": [
+            {
+              "value": "motion",
+              "label": { "en": "Motion", "fr": "Mouvement", "de": "Bewegung", "es": "Movimiento" }
+            },
+            {
+              "value": "person",
+              "label": { "en": "Person", "fr": "Personne", "de": "Person", "es": "Persona" }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "detection",
+          "type": "string",
+          "label": {
+            "en": "Detection (motion or person)",
+            "fr": "Détection (motion ou person)",
+            "de": "Erkennung (motion oder person)",
+            "es": "Detección (motion o person)"
+          }
+        },
+        {
+          "key": "camera_host",
+          "type": "string",
+          "label": {
+            "en": "Camera address",
+            "fr": "Adresse de la caméra",
+            "de": "Kamera-Adresse",
+            "es": "Dirección de la cámara"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera_connection_changed",
+      "label": {
+        "en": "iCSee camera: online / offline",
+        "fr": "Caméra iCSee : en ligne / hors ligne",
+        "de": "iCSee-Kamera: online / offline",
+        "es": "Cámara iCSee: conectada / desconectada"
+      },
+      "description": {
+        "en": "A camera came back or stopped answering.",
+        "fr": "Une caméra est revenue ou ne répond plus.",
+        "de": "Eine Kamera ist zurück oder antwortet nicht mehr.",
+        "es": "Una cámara ha vuelto o ha dejado de responder."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" }
+        },
+        {
+          "key": "status",
+          "type": "select",
+          "label": { "en": "Status", "fr": "État", "de": "Status", "es": "Estado" },
+          "options": [
+            {
+              "value": "online",
+              "label": { "en": "Online", "fr": "En ligne", "de": "Online", "es": "Conectada" }
+            },
+            {
+              "value": "offline",
+              "label": {
+                "en": "Offline",
+                "fr": "Hors ligne",
+                "de": "Offline",
+                "es": "Desconectada"
+              }
+            }
+          ]
+        }
+      ],
+      "variables": [
+        {
+          "key": "status",
+          "type": "string",
+          "label": {
+            "en": "Status (online or offline)",
+            "fr": "État (online ou offline)",
+            "de": "Status (online oder offline)",
+            "es": "Estado (online u offline)"
+          }
+        },
+        {
+          "key": "camera_host",
+          "type": "string",
+          "label": {
+            "en": "Camera address",
+            "fr": "Adresse de la caméra",
+            "de": "Kamera-Adresse",
+            "es": "Dirección de la cámara"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "move_camera",
+      "label": {
+        "en": "Move an iCSee camera",
+        "fr": "Orienter une caméra iCSee",
+        "de": "iCSee-Kamera bewegen",
+        "es": "Mover una cámara iCSee"
+      },
+      "description": {
+        "en": "Turn the camera in one direction for a few seconds.",
+        "fr": "Fait tourner la caméra dans une direction pendant quelques secondes.",
+        "de": "Dreht die Kamera einige Sekunden lang in eine Richtung.",
+        "es": "Gira la cámara en una dirección durante unos segundos."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        },
+        {
+          "key": "direction",
+          "type": "select",
+          "label": { "en": "Direction", "fr": "Direction", "de": "Richtung", "es": "Dirección" },
+          "required": true,
+          "default": "left",
+          "options": [
+            {
+              "value": "left",
+              "label": { "en": "Left", "fr": "Gauche", "de": "Links", "es": "Izquierda" }
+            },
+            {
+              "value": "right",
+              "label": { "en": "Right", "fr": "Droite", "de": "Rechts", "es": "Derecha" }
+            },
+            { "value": "up", "label": { "en": "Up", "fr": "Haut", "de": "Hoch", "es": "Arriba" } },
+            {
+              "value": "down",
+              "label": { "en": "Down", "fr": "Bas", "de": "Runter", "es": "Abajo" }
+            },
+            {
+              "value": "zoom_in",
+              "label": {
+                "en": "Zoom in",
+                "fr": "Zoom avant",
+                "de": "Heranzoomen",
+                "es": "Acercar"
+              }
+            },
+            {
+              "value": "zoom_out",
+              "label": {
+                "en": "Zoom out",
+                "fr": "Zoom arrière",
+                "de": "Herauszoomen",
+                "es": "Alejar"
+              }
+            }
+          ]
+        },
+        {
+          "key": "duration",
+          "type": "number",
+          "label": {
+            "en": "Duration (s)",
+            "fr": "Durée (s)",
+            "de": "Dauer (s)",
+            "es": "Duración (s)"
+          },
+          "default": 1,
+          "min": 0.2,
+          "max": 5
+        }
+      ],
+      "outputs": [
+        {
+          "key": "moved",
+          "type": "boolean",
+          "label": {
+            "en": "Camera moved",
+            "fr": "Caméra déplacée",
+            "de": "Kamera bewegt",
+            "es": "Cámara movida"
+          }
+        }
+      ]
+    },
+    {
+      "key": "goto_preset",
+      "label": {
+        "en": "Go to an iCSee preset",
+        "fr": "Aller à un preset iCSee",
+        "de": "iCSee-Preset anfahren",
+        "es": "Ir a un preset iCSee"
+      },
+      "description": {
+        "en": "Point the camera at a saved position.",
+        "fr": "Oriente la caméra vers une position enregistrée.",
+        "de": "Richtet die Kamera auf eine gespeicherte Position aus.",
+        "es": "Orienta la cámara hacia una posición guardada."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        },
+        {
+          "key": "preset",
+          "type": "number",
+          "label": {
+            "en": "Preset number",
+            "fr": "Numéro du preset",
+            "de": "Preset-Nummer",
+            "es": "Número del preset"
+          },
+          "required": true,
+          "default": 1,
+          "min": 1,
+          "max": 255
+        }
+      ],
+      "outputs": [
+        {
+          "key": "done",
+          "type": "boolean",
+          "label": {
+            "en": "Command accepted",
+            "fr": "Commande acceptée",
+            "de": "Befehl angenommen",
+            "es": "Orden aceptada"
+          }
+        }
+      ]
+    },
+    {
+      "key": "save_preset",
+      "label": {
+        "en": "Save an iCSee preset",
+        "fr": "Enregistrer un preset iCSee",
+        "de": "iCSee-Preset speichern",
+        "es": "Guardar un preset iCSee"
+      },
+      "description": {
+        "en": "Save the current position of the camera in a preset slot.",
+        "fr": "Enregistre la position actuelle de la caméra dans un preset.",
+        "de": "Speichert die aktuelle Position der Kamera in einem Preset.",
+        "es": "Guarda la posición actual de la cámara en un preset."
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        },
+        {
+          "key": "preset",
+          "type": "number",
+          "label": {
+            "en": "Preset number",
+            "fr": "Numéro du preset",
+            "de": "Preset-Nummer",
+            "es": "Número del preset"
+          },
+          "required": true,
+          "default": 1,
+          "min": 1,
+          "max": 255
+        }
+      ],
+      "outputs": [
+        {
+          "key": "saved",
+          "type": "boolean",
+          "label": {
+            "en": "Preset saved",
+            "fr": "Preset enregistré",
+            "de": "Preset gespeichert",
+            "es": "Preset guardado"
+          }
+        }
+      ]
+    },
+    {
+      "key": "take_snapshot",
+      "label": {
+        "en": "Refresh an iCSee image",
+        "fr": "Rafraîchir une image iCSee",
+        "de": "iCSee-Bild aktualisieren",
+        "es": "Actualizar una imagen iCSee"
+      },
+      "description": {
+        "en": "Capture a new image now, ready for the \"send a camera image\" action.",
+        "fr": "Capture une nouvelle image tout de suite, prête pour l'action « envoyer une image de caméra ».",
+        "de": "Nimmt sofort ein neues Bild auf, bereit für die Aktion „Kamerabild senden“.",
+        "es": "Captura una imagen nueva ahora, lista para la acción «enviar una imagen de cámara»."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "captured",
+          "type": "boolean",
+          "label": {
+            "en": "Image captured",
+            "fr": "Image capturée",
+            "de": "Bild aufgenommen",
+            "es": "Imagen capturada"
+          }
+        }
+      ]
+    },
+    {
+      "key": "reboot_camera",
+      "label": {
+        "en": "Restart an iCSee camera",
+        "fr": "Redémarrer une caméra iCSee",
+        "de": "iCSee-Kamera neu starten",
+        "es": "Reiniciar una cámara iCSee"
+      },
+      "timeout_seconds": 15,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ],
+      "outputs": [
+        {
+          "key": "rebooting",
+          "type": "boolean",
+          "label": {
+            "en": "Restart sent",
+            "fr": "Redémarrage envoyé",
+            "de": "Neustart gesendet",
+            "es": "Reinicio enviado"
+          }
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "key": "camera_control",
+      "label": {
+        "en": "iCSee PTZ control",
+        "fr": "Pilotage PTZ iCSee",
+        "de": "iCSee-PTZ-Steuerung",
+        "es": "Control PTZ iCSee"
+      },
+      "description": {
+        "en": "Latest image, status and arrows to turn the camera.",
+        "fr": "Dernière image, état et flèches pour orienter la caméra.",
+        "de": "Letztes Bild, Status und Pfeile zum Drehen der Kamera.",
+        "es": "Última imagen, estado y flechas para girar la cámara."
+      },
+      "icon": "video",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "camera_presets",
+      "label": {
+        "en": "iCSee presets",
+        "fr": "Presets iCSee",
+        "de": "iCSee-Presets",
+        "es": "Presets iCSee"
+      },
+      "description": {
+        "en": "One tap to point the camera at a saved position.",
+        "fr": "Un appui pour orienter la caméra vers une position enregistrée.",
+        "de": "Ein Tipp richtet die Kamera auf eine gespeicherte Position aus.",
+        "es": "Un toque para orientar la cámara hacia una posición guardada."
+      },
+      "icon": "map-pin",
+      "action_timeout_seconds": 15,
+      "settings": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": { "en": "Camera", "fr": "Caméra", "de": "Kamera", "es": "Cámara" },
+          "required": true
+        }
+      ]
+    }
+  ]
+}
