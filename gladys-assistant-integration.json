@@ -8,8 +8,8 @@
     "de": "Steuern Sie Ihre iCSee/XMEye-PTZ-Kameras lokal: Bild, Schwenken, Presets, Bewegung.",
     "es": "Controle sus cámaras PTZ iCSee / XMEye en local: imagen, orientación, presets, movimiento."
   },
-  "version": "1.1.0",
-  "docker_image": "ghcr.io/gboulvin/gladys-icseeptz:1.1.0",
+  "version": "1.2.0",
+  "docker_image": "ghcr.io/gboulvin/gladys-icseeptz:1.2.0",
   "gladys_version": ">=5.1.0",
   "cover_image": "https://raw.githubusercontent.com/gboulvin/Gladys-ICSeePTZ/main/cover.png",
   "categories": ["security", "multimedia"],
