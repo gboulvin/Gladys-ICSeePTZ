@@ -78,6 +78,9 @@ export class DvripClient extends EventEmitter {
     this.socketFactory = socketFactory;
     this.socket = null;
     this.session = 0;
+    // Video channels of the device, from the login answer: 2 on the
+    // dual-lens models (a fixed lens and a PTZ one).
+    this.channels = 1;
     this.sequence = 0;
     this.pending = null;
     this.queue = Promise.resolve();
@@ -91,7 +94,7 @@ export class DvripClient extends EventEmitter {
 
   /**
    * Open the TCP session and log in.
-   * @returns {Promise<{ aliveInterval: number }>}
+   * @returns {Promise<{ aliveInterval: number, channels: number }>}
    */
   async connect() {
     await this.openSocket();
@@ -116,8 +119,9 @@ export class DvripClient extends EventEmitter {
     const fromBody = Number.parseInt(body.SessionID, 16);
     this.session = Number.isNaN(fromBody) ? session : fromBody;
     const aliveInterval = Number(body.AliveInterval) > 0 ? Number(body.AliveInterval) : 0;
+    this.channels = Number.isInteger(body.ChannelNum) && body.ChannelNum > 0 ? body.ChannelNum : 1;
     this.startKeepAlive(aliveInterval || DEFAULT_ALIVE_INTERVAL_S);
-    return { aliveInterval: aliveInterval || DEFAULT_ALIVE_INTERVAL_S };
+    return { aliveInterval: aliveInterval || DEFAULT_ALIVE_INTERVAL_S, channels: this.channels };
   }
 
   openSocket() {

@@ -58,10 +58,14 @@ Speichern Sie und nutzen Sie dann die Schaltflächen:
 - **Kameras testen** verbindet sich mit jeder Adresse und zeigt, welche
   antworten (Modell und Seriennummer) oder warum nicht (falsches Passwort,
   nicht erreichbar...).
-- **Netzwerk durchsuchen** listet die iCSee-Kameras auf, die in Ihrem
-  Netzwerk antworten. Manche Firmwares antworten nicht auf die Suche: Die
-  Adresse wird auch in der iCSee-App angezeigt (Geräteeinstellungen →
-  Netzwerk).
+- **Netzwerk durchsuchen** listet die iCSee-Kameras Ihres Netzwerks auf.
+  Die Suche sendet die iCSee-Suchanfrage und prüft dann Port 34567 auf jeder
+  Adresse des Netzwerks: dem unter „Zu durchsuchendes Netzwerk“
+  eingegebenen (z. B. `192.168.1.0/24`) oder standardmäßig dem Netzwerk der
+  bereits konfigurierten Kameras. Geben Sie für Ihre erste Kamera Ihr
+  Netzwerk ein. Die Adresse wird auch in der iCSee-App
+  (Geräteeinstellungen → Netzwerk) und in der Geräteliste Ihres Routers
+  angezeigt.
 - **Kamera neu starten** startet die gewählte Kamera neu.
 
 Öffnen Sie danach den Reiter **Erkennung** der Integration und fügen Sie

@@ -22,7 +22,10 @@ test('test_connection reports every camera, reachable or not', async () => {
     deps: { clientFactory },
   });
   assert.match(message.en, /^1 of 2 camera\(s\) reachable\./);
-  assert.match(message.en, /192\.168\.1\.50: OK \(IPC-PTZ-3MP, serial A1B2C3D4E5F60718\)/);
+  assert.match(
+    message.en,
+    /192\.168\.1\.50: OK \(IPC-PTZ-3MP, serial A1B2C3D4E5F60718, 1 video channel\(s\)\)/,
+  );
   assert.match(message.en, /192\.168\.1\.51: unreachable/);
   assert.match(message.en, /Ignored invalid addresses: bad\/host/);
   assert.match(message.fr, /caméra\(s\) joignable\(s\)/);
@@ -36,7 +39,7 @@ test('test_connection without camera explains what to do', async () => {
   assert.match(message.en, /No camera configured/);
 });
 
-test('discover_cameras broadcasts the DVRIP search and lists the answers', async () => {
+test('discover_cameras merges the UDP answers and the TCP sweep, and names the models', async () => {
   const reply = (ip) =>
     encodePacket({
       messageId: MESSAGES.DISCOVERY_REPLY,
@@ -50,25 +53,71 @@ test('discover_cameras broadcasts the DVRIP search and lists the answers', async
           source_port: DISCOVERY_PORT,
           payload_base64: reply('0x3201A8C0'),
         },
-        {
-          source_ip: '192.168.1.50',
-          source_port: DISCOVERY_PORT,
-          payload_base64: reply('0x3201A8C0'),
-        },
         { source_ip: '192.168.1.7', source_port: DISCOVERY_PORT, payload_base64: 'Z2FyYmFnZQ==' },
       ],
     },
   });
-  const message = await ACTIONS.discover_cameras(gladys, { config: normalizeConfig({}) });
-  assert.match(message.en, /Found 1 camera\(s\): 192\.168\.1\.50\./);
+  // The TCP sweep finds the UDP camera again, plus one the UDP search missed.
+  const probe = async (host) => host === '192.168.1.50' || host === '192.168.1.61';
+  const camera = createFakeCamera({ model: 'X6E-WEQ' });
+  const clientFactory = (options) =>
+    new DvripClient({ ...options, socketFactory: camera.socketFactory });
+  const message = await ACTIONS.discover_cameras(gladys, {
+    fields: {},
+    config: normalizeConfig({ hosts: '192.168.1.50' }),
+    deps: { probe, clientFactory },
+  });
+  assert.equal(
+    message.en,
+    'Found 2 camera(s): 192.168.1.50 (X6E-WEQ) (already configured), 192.168.1.61 (X6E-WEQ). ' +
+      'Copy the new ones into the "Camera addresses" field and save.',
+  );
+  assert.match(message.fr, /\(déjà configurée\)/);
   const [scan] = gladys.fake.scans;
   assert.equal(scan.type, 'udp-active-broadcast');
   assert.equal(scan.port, DISCOVERY_PORT);
 });
 
-test('discover_cameras without answer points to the iCSee app', async () => {
-  const message = await ACTIONS.discover_cameras(createFakeGladys(), {});
-  assert.match(message.en, /No camera answered/);
+test('discover_cameras scans the network the user typed', async () => {
+  const probed = new Set();
+  const probe = async (host) => {
+    probed.add(host);
+    return false;
+  };
+  const message = await ACTIONS.discover_cameras(createFakeGladys(), {
+    fields: { subnet: '10.0.0.0/24' },
+    config: normalizeConfig({ hosts: '192.168.1.50' }),
+    deps: { probe },
+  });
+  assert.ok(probed.has('10.0.0.1') && !probed.has('192.168.1.1'));
+  assert.match(message.en, /No camera answers on port 34567 in 10\.0\.0\.0\/24/);
+});
+
+test('discover_cameras without camera nor network asks for the network', async () => {
+  const message = await ACTIONS.discover_cameras(createFakeGladys(), {
+    fields: {},
+    config: normalizeConfig({}),
+    deps: {},
+  });
+  assert.match(message.en, /Network to scan/);
+  const invalid = await ACTIONS.discover_cameras(createFakeGladys(), {
+    fields: { subnet: '10.0.0.0/8' },
+    config: normalizeConfig({}),
+    deps: {},
+  });
+  assert.match(invalid.en, /is not a network the search can scan/);
+});
+
+test('test_connection tells how many video channels the camera has', async () => {
+  const camera = createFakeCamera({ channels: 2 });
+  const message = await ACTIONS.test_connection(createFakeGladys(), {
+    config: normalizeConfig({ hosts: '192.168.1.50' }),
+    deps: {
+      clientFactory: (options) =>
+        new DvripClient({ ...options, socketFactory: camera.socketFactory }),
+    },
+  });
+  assert.match(message.en, /2 video channel\(s\)/);
 });
 
 test('reboot_camera restarts the chosen camera', async () => {

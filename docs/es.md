@@ -57,9 +57,12 @@ Guarde y use los botones:
 - **Probar las cámaras** se conecta a cada dirección e indica cuáles
   responden (modelo y número de serie), o por qué no (contraseña incorrecta,
   inaccesible...).
-- **Buscar en la red** enumera las cámaras iCSee que responden en su red.
-  Algunos firmwares no responden a la búsqueda: la dirección también aparece
-  en la app iCSee (Ajustes del dispositivo → Red).
+- **Buscar en la red** enumera las cámaras iCSee de su red. Difunde la
+  búsqueda iCSee y después prueba el puerto 34567 en cada dirección de la
+  red: la que indique en «Red a analizar» (p. ej. `192.168.1.0/24`) o, por
+  defecto, la red de las cámaras ya configuradas. Para su primera cámara,
+  indique su red. La dirección también aparece en la app iCSee (Ajustes del
+  dispositivo → Red) y en la lista de dispositivos de su router.
 - **Reiniciar una cámara** reinicia la cámara elegida.
 
 Después abra la pestaña **Detección** de la integración y añada sus cámaras.

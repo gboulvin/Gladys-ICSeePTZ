@@ -295,7 +295,32 @@
         "de": "Listet die iCSee-Kameras auf, die in Ihrem lokalen Netzwerk antworten.",
         "es": "Enumera las cámaras iCSee que responden en su red local."
       },
-      "timeout_seconds": 30
+      "timeout_seconds": 60,
+      "fields": [
+        {
+          "key": "subnet",
+          "type": "string",
+          "label": {
+            "en": "Network to scan",
+            "fr": "Réseau à analyser",
+            "de": "Zu durchsuchendes Netzwerk",
+            "es": "Red a analizar"
+          },
+          "description": {
+            "en": "Optional. Defaults to the network of the configured cameras.",
+            "fr": "Facultatif. Par défaut, le réseau des caméras configurées.",
+            "de": "Optional. Standardmäßig das Netzwerk der konfigurierten Kameras.",
+            "es": "Opcional. Por defecto, la red de las cámaras configuradas."
+          },
+          "placeholder": {
+            "en": "e.g. 192.168.1.0/24",
+            "fr": "ex. 192.168.1.0/24",
+            "de": "z. B. 192.168.1.0/24",
+            "es": "p. ej. 192.168.1.0/24"
+          },
+          "required": false
+        }
+      ]
     },
     {
       "key": "reboot_camera",

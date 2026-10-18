@@ -54,9 +54,12 @@ Save, then use the buttons:
 
 - **Test the cameras** connects to every address and tells which ones answer
   (model and serial number), or why not (wrong password, unreachable...).
-- **Search the network** lists the iCSee cameras answering on your network.
-  Some firmwares do not answer the search: the address is also shown in the
-  iCSee app (Device settings → Network).
+- **Search the network** lists the iCSee cameras of your network. It
+  broadcasts the iCSee search, then tries port 34567 on every address of the
+  network: the one you type in "Network to scan" (e.g. `192.168.1.0/24`), or
+  by default the network of the cameras already configured. For your first
+  camera, type your network. The address is also shown in the iCSee app
+  (Device settings → Network) and in the device list of your router.
 - **Restart a camera** restarts the chosen camera.
 
 Then open the **Discovery** tab of the integration and add your cameras.

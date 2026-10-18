@@ -58,10 +58,13 @@ Enregistrez, puis utilisez les boutons :
 - **Tester les caméras** se connecte à chaque adresse et indique celles qui
   répondent (modèle et numéro de série), ou pourquoi (mauvais mot de passe,
   injoignable...).
-- **Rechercher sur le réseau** liste les caméras iCSee qui répondent sur
-  votre réseau. Certains firmwares ne répondent pas à la recherche :
-  l'adresse est aussi affichée dans l'application iCSee (Paramètres de
-  l'appareil → Réseau).
+- **Rechercher sur le réseau** liste les caméras iCSee de votre réseau. Il
+  diffuse la recherche iCSee, puis essaie le port 34567 sur chaque adresse
+  du réseau : celui que vous saisissez dans « Réseau à analyser » (ex.
+  `192.168.1.0/24`), ou par défaut le réseau des caméras déjà configurées.
+  Pour votre première caméra, saisissez votre réseau. L'adresse est aussi
+  affichée dans l'application iCSee (Paramètres de l'appareil → Réseau) et
+  dans la liste des appareils de votre box.
 - **Redémarrer une caméra** redémarre la caméra choisie.
 
 Ouvrez ensuite l'onglet **Découverte** de l'intégration et ajoutez vos

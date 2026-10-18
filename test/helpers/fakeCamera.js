@@ -35,6 +35,7 @@ const SESSION = 0x1a;
  * @param {Buffer|null} [options.snapshot] JPEG answered to OPSNAP, null: unsupported
  * @param {boolean} [options.reachable] false: the connection never opens
  * @param {boolean} [options.silent] true: logged in, then never answers
+ * @param {number} [options.channels] video channels (2 on the dual-lens models)
  */
 export function createFakeCamera({
   password = '',
@@ -43,6 +44,7 @@ export function createFakeCamera({
   snapshot = TINY_JPEG,
   reachable = true,
   silent = false,
+  channels = 1,
 } = {}) {
   const camera = {
     requests: [],
@@ -129,7 +131,7 @@ export function createFakeCamera({
         if (body.PassWord === sofiaHash(password) && body.UserName === 'admin') {
           reply(server, packet, {
             AliveInterval: 20,
-            ChannelNum: 1,
+            ChannelNum: channels,
             DeviceType: 'IPC',
             Ret: 100,
             SessionID: '0x0000001A',

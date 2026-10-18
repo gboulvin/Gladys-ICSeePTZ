@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- "Search the network" missed the cameras that answer the iCSee broadcast
+  search by broadcast: it now also tries the camera port (34567) on every
+  address of the network, the one typed in the new "Network to scan" field or
+  the network of the configured cameras, and names the model of each camera
+  found.
+
+### Added
+
+- "Test the cameras" tells how many video channels each camera has (2 on the
+  dual-lens models).
+
 ## [1.0.0] - 2026-10-17
 
 ### Added

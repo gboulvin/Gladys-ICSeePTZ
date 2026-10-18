@@ -45,6 +45,7 @@ src/image.js                      ffmpeg: fit the 150 KB limit, RTSP fallback ca
 src/scenes.js                     scene triggers (keys, event data) and scene actions
 src/widgets.js                    dashboard widgets (camera_control, camera_presets)
 src/actions.js                    manifest actions (test, network search, restart)
+src/discovery.js                  network search: subnet parsing, TCP sweep of port 34567
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + parsing
 src/i18n.js                       every user-facing message, in en / fr / de / es
 src/store.js                      known cameras (address -> serial) in /data/cameras.json

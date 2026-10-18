@@ -8,8 +8,14 @@
 
 import { createLogger } from '@gladysassistant/integration-sdk';
 import { DvripClient } from './dvrip/client.js';
-import { DISCOVERY_PORT, buildDiscoveryRequest, parseDiscoveryReply } from './dvrip/protocol.js';
+import {
+  DEFAULT_PORT,
+  DISCOVERY_PORT,
+  buildDiscoveryRequest,
+  parseDiscoveryReply,
+} from './dvrip/protocol.js';
 import { findCamera } from './devices.js';
+import { expandSubnet, subnetsOf, sweep } from './discovery.js';
 import { joinMessages, t, truncateMessage } from './i18n.js';
 
 const logger = createLogger({ name: 'actions' });
@@ -36,7 +42,7 @@ async function testConnection(gladys, { config, deps }) {
         timeoutMs: 6_000,
       });
       try {
-        await client.connect();
+        const { channels } = await client.connect();
         const info = await client.getSystemInfo();
         return {
           ok: true,
@@ -44,6 +50,7 @@ async function testConnection(gladys, { config, deps }) {
             host,
             model: info.DeviceModel ?? info.HardWare ?? '?',
             serial: info.SerialNo ?? '?',
+            channels,
           }),
         };
       } catch (err) {
@@ -70,11 +77,9 @@ async function testConnection(gladys, { config, deps }) {
   return truncateMessage(joinMessages(parts), MAX_MESSAGE_LENGTH);
 }
 
-/**
- * Broadcast the DVRIP search request (through the Gladys core, the container
- * cannot broadcast on the LAN) and list the cameras that answered.
- */
-async function discoverCameras(gladys) {
+// Answers of the DVRIP UDP search relayed by the Gladys core, by address.
+async function udpSearch(gladys) {
+  const found = new Map();
   let replies;
   try {
     replies = await gladys.scanNetwork('udp-active-broadcast', {
@@ -83,24 +88,97 @@ async function discoverCameras(gladys) {
       timeoutSeconds: 5,
     });
   } catch (err) {
-    logger.warn(`Network search failed: ${err.message}`);
-    return t('discovery_failed', { error: err.message });
+    // Not fatal: the TCP sweep does not depend on it.
+    logger.warn(`UDP network search failed: ${err.message}`);
+    return found;
   }
-  const found = new Map();
   for (const reply of replies ?? []) {
     const camera = parseDiscoveryReply(
       Buffer.from(reply.payload_base64 ?? '', 'base64'),
       reply.source_ip,
     );
     if (camera) {
-      const address = camera.port === 34567 ? camera.host : `${camera.host}:${camera.port}`;
-      found.set(address, camera);
+      found.set(
+        camera.port === DEFAULT_PORT ? camera.host : `${camera.host}:${camera.port}`,
+        camera,
+      );
+    }
+  }
+  return found;
+}
+
+// Model of a found camera, when the configured credentials open it.
+async function identify(address, config, clientFactory) {
+  const [host, port] = address.split(':');
+  const client = clientFactory({
+    host,
+    port: port ? Number(port) : DEFAULT_PORT,
+    username: config.username,
+    password: config.password,
+    timeoutMs: 4_000,
+  });
+  try {
+    await client.connect();
+    const info = await client.getSystemInfo();
+    return info.DeviceModel ?? info.HardWare ?? null;
+  } catch {
+    return null;
+  } finally {
+    client.close();
+  }
+}
+
+/**
+ * Find the cameras of the local network: the DVRIP UDP search through the
+ * core, plus a TCP sweep of port 34567 over the subnet the user typed (or
+ * the subnets of the configured cameras). See src/discovery.js for why both.
+ */
+async function discoverCameras(gladys, { fields = {}, config, deps = {} }) {
+  const typed = String(fields.subnet ?? '').trim();
+  let subnets;
+  if (typed) {
+    if (!expandSubnet(typed)) {
+      return t('discovery_invalid_subnet', { subnet: typed });
+    }
+    subnets = [typed];
+  } else {
+    subnets = subnetsOf(config?.cameras ?? []);
+  }
+
+  const found = await udpSearch(gladys);
+  for (const subnet of subnets) {
+    for (const host of await sweep(expandSubnet(subnet), { probe: deps.probe })) {
+      if (!found.has(host)) {
+        found.set(host, { host, port: DEFAULT_PORT });
+      }
     }
   }
   if (found.size === 0) {
-    return t('discovery_none');
+    return subnets.length > 0
+      ? t('discovery_none_subnet', { subnets: subnets.join(', ') })
+      : t('discovery_need_subnet');
   }
-  return t('discovery_found', { count: found.size, hosts: [...found.keys()].join(', ') });
+
+  const clientFactory = deps.clientFactory ?? ((options) => new DvripClient(options));
+  const configured = new Set(
+    (config?.cameras ?? []).map(({ host, port }) =>
+      port === DEFAULT_PORT ? host : `${host}:${port}`,
+    ),
+  );
+  const entries = await Promise.all(
+    [...found.keys()].map(async (address) => {
+      const model = config ? await identify(address, config, clientFactory) : null;
+      const parts = [model ? `${address} (${model})` : address];
+      if (configured.has(address)) {
+        parts.push(t('discovery_configured'));
+      }
+      return joinMessages(parts);
+    }),
+  );
+  return truncateMessage(
+    t('discovery_found', { count: found.size, hosts: joinMessages(entries, ', ') }),
+    MAX_MESSAGE_LENGTH,
+  );
 }
 
 async function rebootCamera(gladys, { fields, manager }) {

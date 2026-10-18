@@ -30,10 +30,10 @@ export const MESSAGES = {
     es: '{online} de {total} cámara(s) accesible(s). {details}',
   },
   camera_ok: {
-    en: '{host}: OK ({model}, serial {serial})',
-    fr: '{host} : OK ({model}, n° de série {serial})',
-    de: '{host}: OK ({model}, Seriennummer {serial})',
-    es: '{host}: OK ({model}, n.º de serie {serial})',
+    en: '{host}: OK ({model}, serial {serial}, {channels} video channel(s))',
+    fr: '{host} : OK ({model}, n° de série {serial}, {channels} canal(aux) vidéo)',
+    de: '{host}: OK ({model}, Seriennummer {serial}, {channels} Videokanal/-kanäle)',
+    es: '{host}: OK ({model}, n.º de serie {serial}, {channels} canal(es) de vídeo)',
   },
   camera_error: {
     en: '{host}: unreachable ({error})',
@@ -53,11 +53,29 @@ export const MESSAGES = {
     de: 'Initialisierung fehlgeschlagen, prüfen Sie die Protokolle der Integration.',
     es: 'La inicialización ha fallado, consulte los registros de la integración.',
   },
-  discovery_none: {
-    en: 'No camera answered the network search. Some firmwares do not answer it: enter the address shown in the iCSee app (Device settings > Network).',
-    fr: "Aucune caméra n'a répondu à la recherche réseau. Certains firmwares n'y répondent pas : saisissez l'adresse affichée dans l'application iCSee (Paramètres de l'appareil > Réseau).",
-    de: 'Keine Kamera hat auf die Netzwerksuche geantwortet. Manche Firmwares antworten nicht: Geben Sie die in der iCSee-App angezeigte Adresse ein (Geräteeinstellungen > Netzwerk).',
-    es: 'Ninguna cámara ha respondido a la búsqueda en red. Algunos firmwares no responden: introduzca la dirección que muestra la app iCSee (Ajustes del dispositivo > Red).',
+  discovery_need_subnet: {
+    en: 'No camera answered the broadcast search. Enter your network (e.g. 192.168.1.0/24) in the "Network to scan" field to scan it address by address.',
+    fr: "Aucune caméra n'a répondu à la recherche par diffusion. Indiquez votre réseau (ex. 192.168.1.0/24) dans le champ « Réseau à analyser » pour l'analyser adresse par adresse.",
+    de: 'Keine Kamera hat auf die Broadcast-Suche geantwortet. Geben Sie Ihr Netzwerk (z. B. 192.168.1.0/24) im Feld „Zu durchsuchendes Netzwerk“ ein, um es Adresse für Adresse zu durchsuchen.',
+    es: 'Ninguna cámara ha respondido a la búsqueda por difusión. Indique su red (p. ej. 192.168.1.0/24) en el campo «Red a analizar» para analizarla dirección por dirección.',
+  },
+  discovery_none_subnet: {
+    en: 'No camera answers on port 34567 in {subnets}. Check that the camera is on the same network as Gladys (not on a guest Wi-Fi), or find its address in your router.',
+    fr: 'Aucune caméra ne répond sur le port 34567 dans {subnets}. Vérifiez que la caméra est sur le même réseau que Gladys (pas sur un Wi-Fi invité), ou cherchez son adresse dans votre box.',
+    de: 'Keine Kamera antwortet auf Port 34567 in {subnets}. Prüfen Sie, ob die Kamera im selben Netzwerk wie Gladys ist (nicht im Gast-WLAN), oder suchen Sie ihre Adresse in Ihrem Router.',
+    es: 'Ninguna cámara responde en el puerto 34567 en {subnets}. Compruebe que la cámara esté en la misma red que Gladys (no en una wifi de invitados), o busque su dirección en su router.',
+  },
+  discovery_invalid_subnet: {
+    en: '"{subnet}" is not a network the search can scan: enter it like 192.168.1.0/24.',
+    fr: "« {subnet} » n'est pas un réseau analysable : saisissez-le sous la forme 192.168.1.0/24.",
+    de: '„{subnet}“ ist kein durchsuchbares Netzwerk: Geben Sie es wie 192.168.1.0/24 ein.',
+    es: '«{subnet}» no es una red que se pueda analizar: introdúzcala como 192.168.1.0/24.',
+  },
+  discovery_configured: {
+    en: '(already configured)',
+    fr: '(déjà configurée)',
+    de: '(bereits konfiguriert)',
+    es: '(ya configurada)',
   },
   discovery_found: {
     en: 'Found {count} camera(s): {hosts}. Copy the new ones into the "Camera addresses" field and save.',
