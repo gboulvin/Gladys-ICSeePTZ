@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-18
+
 ### Fixed
 
 - "Search the network" missed the cameras that answer the iCSee broadcast
@@ -50,5 +52,6 @@ the notes of the version's GitHub Release.
 - English, French, German and Spanish texts and user documentation.
 - `SECURITY.md`, `CLAUDE.md`, CI on Node 22 and 24, release workflows.
 
-[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/releases/tag/v1.0.0
