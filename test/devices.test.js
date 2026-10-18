@@ -12,6 +12,7 @@ import {
   findCamera,
   idsOf,
   platformIdFromExternalId,
+  resolveDevice,
   setValue,
 } from '../src/devices.js';
 import { stubCamera, stubManager } from './helpers/stubs.js';
@@ -139,4 +140,29 @@ test('setValue routes the move and preset commands to the camera', async () => {
     }),
     /Unknown camera/,
   );
+});
+
+test('a dual-lens camera publishes the PTZ device and a fixed-lens device', async () => {
+  const gladys = createFakeGladys();
+  const camera = stubCamera({ dual: true });
+  const manager = stubManager([camera]);
+  const devices = buildDiscoveredDevices(gladys, manager, config);
+  await gladys.publishDiscoveredDevices(devices);
+  assert.equal(devices.length, 2);
+  const [main, fixed] = devices;
+  // The existing device keeps its id: scenes and dashboards keep working.
+  assert.equal(main.external_id, idsOf(gladys, camera).device);
+  assert.ok(featureOf(main, DEVICE_FEATURE_TYPES.CAMERA.MOVE));
+  assert.match(fixed.external_id, /:camera:a1b2c3d4e5f60718-fixed$/);
+  assert.deepEqual(
+    fixed.features.map((feature) => feature.type),
+    [DEVICE_FEATURE_TYPES.CAMERA.IMAGE],
+  );
+  assert.deepEqual(resolveDevice(gladys, manager, fixed), { camera, lens: 'fixed' });
+  assert.deepEqual(resolveDevice(gladys, manager, main), { camera, lens: 'main' });
+  assert.equal(buildTransportEntries(gladys, manager).length, 2);
+
+  // Not dual (any more): the fixed device designates nothing.
+  const single = stubManager([stubCamera()]);
+  assert.equal(resolveDevice(gladys, single, fixed), null);
 });

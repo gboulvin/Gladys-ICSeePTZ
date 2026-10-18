@@ -49,6 +49,7 @@ Open **Integrations → iCSee PTZ → Configuration**:
 | Motorized zoom    | Tick it only if your model has an optical zoom.                                                              |
 | Presets           | The positions saved on the cameras, as `slot:name`: `1:Entrance, 2:Garden`.                                  |
 | Motion detection  | Receive the detections of the cameras.                                                                       |
+| Dual-lens cameras | Split the image of the dual-lens models (fixed lens on top by default).                                      |
 
 Save, then use the buttons:
 
@@ -75,6 +76,28 @@ Then open the **Discovery** tab of the integration and add your cameras.
 
 Whatever sends it, a movement always stops by itself after 5 seconds at the
 latest.
+
+## Dual-lens cameras
+
+Some models (X6E-WEQ...) have a fixed lens and a PTZ lens, but send both in
+**one image**, one above the other: the iCSee app splits it on the phone. The
+integration does the same, automatically: an image taller than wide is a
+dual-lens image.
+
+- The camera device you already have becomes the **PTZ lens** (image, arrows,
+  presets, motion): your scenes and dashboards keep working.
+- A second device, **"fixed lens"**, appears in the Discovery tab with the
+  image of the fixed lens: add it like the first one.
+- One capture feeds both images: splitting costs nothing more than today.
+
+The **Dual-lens cameras** setting chooses where the fixed lens is (on top by
+default, or at the bottom) or turns the split off.
+
+Live video is not available through this integration (Gladys external
+integrations exchange still images, 12 per minute at most). For live video,
+add the camera to the Gladys **RTSP camera** integration as well, with
+`rtsp://<address>:554/user=admin&password=<password>&channel=1&stream=0.sdp?real_stream`
+(both lenses in one image).
 
 ## Presets
 

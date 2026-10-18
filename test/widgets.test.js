@@ -148,3 +148,17 @@ test('refreshWidgets nudges every widget, at most once per 10 s', (t) => {
   assert.deepEqual(gladys.fake.widgetRefreshes, [...Object.keys(WIDGETS), ...Object.keys(WIDGETS)]);
   resetWidgetNudges();
 });
+
+test('the control widget of the fixed lens shows its image, without arrows', async () => {
+  const gladys = createFakeGladys();
+  const camera = stubCamera({ dual: true });
+  const manager = stubManager([camera]);
+  const context = { gladys, manager, settings: { camera: idsOf(gladys, camera, 'fixed').device } };
+  const content = await getContent(CONTROL_WIDGET, context);
+  assert.deepEqual(validateWidgetContent(content), []);
+  const image = content.components.find((component) => component.type === 'image');
+  assert.equal(image.key, imageKeyOf(camera, 'fixed'));
+  assert.notEqual(image.key, imageKeyOf(camera));
+  assert.ok(!content.components.some((component) => component.type === 'button'));
+  assert.ok(widgetImage(manager, image.key).length > 0);
+});

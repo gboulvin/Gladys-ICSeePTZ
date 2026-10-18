@@ -67,6 +67,12 @@ test/                             node --test; helpers/fakeCamera.js is an in-me
   `Camera.move` (`MAX_MOVE_SECONDS`, 5 s): a lost stop must never leave a
   motor running. Do not add a code path that sends a DVRIP start without it.
   Movement values follow the Gladys `CAMERA_MOVE` enum (0 stop, 1-6).
+- **Dual-lens models** stream both lenses stacked in one frame (detected by
+  `isStackedDualLens`: taller than wide). The main device (`<serial>`) is the
+  PTZ lens and keeps every feature; the fixed lens is `<serial>-fixed`, image
+  only. One frame per capture, cropped per lens in the same ffmpeg pass
+  (`fitJpeg({ crop })`). The detected layout is remembered in
+  `/data/cameras.json` (`dual: true`).
 - **One request in flight per session.** The firmware answers in order with
   no request id: `DvripClient.request` serializes, and a timeout closes the
   session. Keep it that way.

@@ -1,5 +1,6 @@
 // -----------------------------------------------------------------------------
-// Gladys devices: one device per identified camera.
+// Gladys devices: one device per identified camera, two for a dual-lens
+// model (see LENSES in src/camera.js).
 //
 // Features (Gladys PTZ spec, docs/specs/camera-ptz-control.md of the core):
 //   - camera/image   the image channel (publishCameraImage / onGetImage);
@@ -8,6 +9,11 @@
 //   - camera/preset  recall a saved position, the labeled slots in
 //                    `supported_options` (only when presets are configured);
 //   - motion-sensor  the detections of the camera (when events are enabled).
+//
+// A dual-lens model streams its two lenses stacked in one frame. The main
+// device keeps the id of the camera and becomes the PTZ lens (move, presets,
+// motion: existing scenes keep working); the fixed lens is a second device,
+// `<serial>-fixed`, carrying only its image.
 //
 // External ids derive from the camera serial number: they survive restarts,
 // address changes and re-installs. Feature keys are forever too.
@@ -18,7 +24,7 @@ import {
   DEVICE_FEATURE_TYPES,
   DEVICE_TRANSPORTS,
 } from '@gladysassistant/integration-sdk';
-import { CAMERA_MOVE } from './camera.js';
+import { CAMERA_MOVE, LENSES } from './camera.js';
 
 export const DEVICE_TYPE = 'camera';
 
@@ -42,8 +48,18 @@ const ZOOM_OPTIONS = [
   { value: CAMERA_MOVE.ZOOM_OUT, label: 'Zoom out' },
 ];
 
-export function idsOf(gladys, camera) {
-  return gladys.externalIds(DEVICE_TYPE, camera.platformId);
+// Suffix of the platform id of the fixed-lens device.
+const FIXED_SUFFIX = `-${LENSES.FIXED}`;
+
+/**
+ * External ids of the device of one lens of a camera.
+ * @param {object} gladys
+ * @param {object} camera
+ * @param {string} [lens] one of LENSES
+ */
+export function idsOf(gladys, camera, lens = LENSES.MAIN) {
+  const suffix = lens === LENSES.FIXED ? FIXED_SUFFIX : '';
+  return gladys.externalIds(DEVICE_TYPE, `${camera.platformId}${suffix}`);
 }
 
 /**
@@ -66,9 +82,27 @@ export function platformIdFromExternalId(gladys, externalId) {
  * @param {object|string} device device or external id
  */
 export function findCamera(gladys, manager, device) {
+  return resolveDevice(gladys, manager, device)?.camera ?? null;
+}
+
+/**
+ * The camera AND the lens a device designates, or null.
+ * @returns {{ camera: object, lens: string }|null}
+ */
+export function resolveDevice(gladys, manager, device) {
   const externalId = typeof device === 'string' ? device : device?.external_id;
   const platformId = platformIdFromExternalId(gladys, externalId);
-  return platformId ? manager.findByPlatformId(platformId) : null;
+  if (!platformId) {
+    return null;
+  }
+  const fixed = platformId.endsWith(FIXED_SUFFIX);
+  const camera = manager.findByPlatformId(
+    fixed ? platformId.slice(0, -FIXED_SUFFIX.length) : platformId,
+  );
+  if (!camera || (fixed && !camera.dual)) {
+    return null;
+  }
+  return { camera, lens: fixed ? LENSES.FIXED : LENSES.MAIN };
 }
 
 function withOrder(options) {
@@ -150,18 +184,56 @@ export function buildDevice(gladys, camera, config) {
   };
 }
 
+/**
+ * Discovery payload of the fixed lens of a dual-lens camera: its image.
+ */
+export function buildFixedLensDevice(gladys, camera) {
+  const ids = idsOf(gladys, camera, LENSES.FIXED);
+  const model = camera.model ? ` ${camera.model}` : '';
+  return {
+    name: `iCSee${model} fixed lens (${camera.host})`,
+    external_id: ids.device,
+    should_poll: false,
+    params: [
+      { name: 'HOST', value: camera.host },
+      { name: 'PORT', value: String(camera.port) },
+      { name: 'LENS', value: LENSES.FIXED },
+    ],
+    features: [
+      {
+        name: 'Image',
+        external_id: ids.feature(FEATURES.IMAGE),
+        category: DEVICE_FEATURE_CATEGORIES.CAMERA,
+        type: DEVICE_FEATURE_TYPES.CAMERA.IMAGE,
+        read_only: true,
+        has_feedback: false,
+        keep_history: false,
+        min: 0,
+        max: 0,
+      },
+    ],
+  };
+}
+
 export function buildDiscoveredDevices(gladys, manager, config) {
-  return manager.identified().map((camera) => buildDevice(gladys, camera, config));
+  return manager
+    .identified()
+    .flatMap((camera) => [
+      buildDevice(gladys, camera, config),
+      ...(camera.dual ? [buildFixedLensDevice(gladys, camera)] : []),
+    ]);
 }
 
 /**
  * Transport badge of every published camera: local while the session is up.
  */
 export function buildTransportEntries(gladys, manager) {
-  return manager.identified().map((camera) => ({
-    external_id: idsOf(gladys, camera).device,
-    transport: camera.online ? DEVICE_TRANSPORTS.LOCAL : DEVICE_TRANSPORTS.UNREACHABLE,
-  }));
+  return manager.identified().flatMap((camera) =>
+    camera.lenses.map((lens) => ({
+      external_id: idsOf(gladys, camera, lens).device,
+      transport: camera.online ? DEVICE_TRANSPORTS.LOCAL : DEVICE_TRANSPORTS.UNREACHABLE,
+    })),
+  );
 }
 
 /**

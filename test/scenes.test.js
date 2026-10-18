@@ -21,7 +21,7 @@ function setup(cameraOptions) {
   const camera = stubCamera(cameraOptions);
   const manager = stubManager([camera]);
   const published = [];
-  const publishImage = async (cam, jpeg) => published.push([cam, jpeg]);
+  const publishImage = async (cam, jpeg, lens) => published.push([cam, jpeg, lens]);
   const run = (key, fields) =>
     SCENE_ACTIONS[key](gladys, {
       fields: { device: idsOf(gladys, camera).device, ...fields },
@@ -92,6 +92,16 @@ test('take_snapshot captures and pushes the image to the camera device', async (
   assert.deepEqual(outputs, { captured: true });
   assert.equal(published.length, 1);
   assert.equal(published[0][0], camera);
+});
+
+test('take_snapshot pushes both lenses of a dual-lens camera, from one frame', async () => {
+  const { camera, published, run } = setup({ dual: true });
+  assert.deepEqual(await run('take_snapshot', {}), { captured: true });
+  assert.deepEqual(
+    published.map(([, , lens]) => lens),
+    ['main', 'fixed'],
+  );
+  assert.deepEqual(camera.calls, [['captureAll']]);
 });
 
 test('reboot_camera reboots', async () => {

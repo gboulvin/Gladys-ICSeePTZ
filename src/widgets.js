@@ -16,8 +16,8 @@
 // -----------------------------------------------------------------------------
 
 import { WIDGET_COLORS, createLogger } from '@gladysassistant/integration-sdk';
-import { DIRECTIONS } from './camera.js';
-import { findCamera } from './devices.js';
+import { DIRECTIONS, LENSES } from './camera.js';
+import { resolveDevice } from './devices.js';
 import { t } from './i18n.js';
 
 const logger = createLogger({ name: 'widgets' });
@@ -43,15 +43,17 @@ const DIRECTION_BUTTONS = [
   { direction: 'down', label: 'move_down', icon: 'arrow-down' },
 ];
 
-// Image keys: `snap-<camera>-<hash of the bytes>`. The core caches an image
-// one hour by key, so the key changes with the bytes.
+// Image keys: `snap-<camera>[-fixed]-<hash of the bytes>`. The core caches
+// an image one hour by key, so the key changes with the bytes.
 const IMAGE_KEY_PREFIX = 'snap-';
 
-export function imageKeyOf(camera) {
-  if (!camera.lastImage || !camera.platformId) {
+export function imageKeyOf(camera, lens = LENSES.MAIN) {
+  const image = camera.lastImages?.[lens];
+  if (!image || !camera.platformId) {
     return null;
   }
-  return `${IMAGE_KEY_PREFIX}${camera.platformId.slice(0, 40)}-${camera.lastImage.hash}`;
+  const lensPart = lens === LENSES.MAIN ? '' : `-${lens}`;
+  return `${IMAGE_KEY_PREFIX}${camera.platformId.slice(0, 40)}${lensPart}-${image.hash}`;
 }
 
 /**
@@ -60,11 +62,14 @@ export function imageKeyOf(camera) {
  * @param {string} imageKey
  */
 export function widgetImage(manager, imageKey) {
-  const camera = manager.identified().find((candidate) => imageKeyOf(candidate) === imageKey);
-  if (!camera) {
-    throw new Error(`Image ${imageKey} is no longer available`);
+  for (const camera of manager.identified()) {
+    for (const lens of Object.values(LENSES)) {
+      if (imageKeyOf(camera, lens) === imageKey) {
+        return camera.lastImages[lens].jpeg.toString('base64');
+      }
+    }
   }
-  return camera.lastImage.jpeg.toString('base64');
+  throw new Error(`Image ${imageKey} is no longer available`);
 }
 
 function cardText(message) {
@@ -72,18 +77,18 @@ function cardText(message) {
 }
 
 /**
- * Resolve the camera of a widget instance, or the content explaining why
- * there is none.
+ * Resolve the camera (and lens) of a widget instance, or the content
+ * explaining why there is none.
  */
 function resolveCamera(gladys, manager, settings) {
   if (!settings?.camera) {
     return { content: cardText(t('widget_pick_camera')) };
   }
-  const camera = findCamera(gladys, manager, settings.camera);
-  if (!camera) {
+  const resolved = resolveDevice(gladys, manager, settings.camera);
+  if (!resolved) {
     return { content: cardText(t('unknown_camera')) };
   }
-  return { camera };
+  return resolved;
 }
 
 function lastDetectionText(camera, now = Date.now()) {
@@ -120,12 +125,12 @@ function requireOnline(camera) {
 export const WIDGETS = {
   [CONTROL_WIDGET]: {
     async get(gladys, { settings, manager, config }) {
-      const { camera, content } = resolveCamera(gladys, manager, settings);
+      const { camera, lens, content } = resolveCamera(gladys, manager, settings);
       if (!camera) {
         return content;
       }
       const components = [];
-      const imageKey = imageKeyOf(camera);
+      const imageKey = imageKeyOf(camera, lens);
       if (imageKey) {
         components.push({
           type: 'image',
@@ -152,7 +157,8 @@ export const WIDGETS = {
         });
       }
       components.push({ type: 'status', items });
-      for (const button of DIRECTION_BUTTONS) {
+      // The fixed lens of a dual-lens model does not move: no arrows.
+      for (const button of lens === LENSES.MAIN ? DIRECTION_BUTTONS : []) {
         components.push({
           type: 'button',
           label: t(button.label),

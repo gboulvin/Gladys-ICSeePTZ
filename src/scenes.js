@@ -114,8 +114,11 @@ export const SCENE_ACTIONS = {
       fields.device,
       'take_snapshot',
       async (camera) => {
-        const jpeg = await camera.captureJpeg();
-        await publishImage(camera, jpeg);
+        // Every lens of a dual-lens model, from the same frame.
+        const images = await camera.captureAll();
+        for (const [lens, jpeg] of Object.entries(images)) {
+          await publishImage(camera, jpeg, lens);
+        }
       },
     );
     return { captured };

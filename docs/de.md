@@ -52,6 +52,7 @@ Cloud-Konto, keine Internetverbindung nötig.
 | Motorisierter Zoom         | Nur ankreuzen, wenn Ihr Modell einen optischen Zoom hat.                                                                |
 | Presets                    | Die auf den Kameras gespeicherten Positionen als `Nummer:Name`: `1:Eingang, 2:Garten`.                                  |
 | Bewegungserkennung         | Empfängt die Erkennungen der Kameras.                                                                                   |
+| Kameras mit Doppelobjektiv | Teilt das Bild der Modelle mit Doppelobjektiv (festes Objektiv standardmäßig oben).                                     |
 
 Speichern Sie und nutzen Sie dann die Schaltflächen:
 
@@ -83,6 +84,33 @@ Ihre Kameras hinzu.
 
 Egal, woher der Befehl kommt: Eine Bewegung stoppt immer spätestens nach
 5 Sekunden von selbst.
+
+## Kameras mit Doppelobjektiv
+
+Manche Modelle (X6E-WEQ...) haben ein festes und ein PTZ-Objektiv, senden
+beide aber in **einem Bild** übereinander: Die iCSee-App teilt es auf dem
+Telefon. Die Integration macht dasselbe, automatisch: Ein Bild, das höher als
+breit ist, ist ein Doppelobjektiv-Bild.
+
+- Das bereits vorhandene Kameragerät wird zum **PTZ-Objektiv** (Bild,
+  Pfeile, Presets, Bewegung): Ihre Szenen und Dashboards funktionieren
+  weiter.
+- Ein zweites Gerät, **„fixed lens“** (festes Objektiv), erscheint im Reiter
+  Erkennung mit dem Bild des festen Objektivs: Fügen Sie es wie das erste
+  hinzu.
+- Eine einzige Aufnahme liefert beide Bilder: Das Teilen kostet nicht mehr
+  als bisher.
+
+Die Einstellung **Kameras mit Doppelobjektiv** legt fest, wo sich das feste
+Objektiv befindet (standardmäßig oben, oder unten), oder schaltet das Teilen
+ab.
+
+Live-Video ist mit dieser Integration nicht verfügbar (externe
+Gladys-Integrationen tauschen Standbilder aus, höchstens 12 pro Minute). Für
+Live-Video fügen Sie die Kamera zusätzlich der Gladys-Integration
+**RTSP-Kamera** hinzu, mit
+`rtsp://<Adresse>:554/user=admin&password=<Passwort>&channel=1&stream=0.sdp?real_stream`
+(beide Objektive in einem Bild).
 
 ## Presets
 

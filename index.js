@@ -22,7 +22,7 @@ import {
   FEATURES,
   buildDiscoveredDevices,
   buildTransportEntries,
-  findCamera,
+  resolveDevice,
   idsOf,
   setValue,
 } from './src/devices.js';
@@ -51,8 +51,8 @@ async function publishTransports() {
   }
 }
 
-async function publishImage(camera, jpeg) {
-  await gladys.publishCameraImage(idsOf(gladys, camera).device, toCameraImage(jpeg));
+async function publishImage(camera, jpeg, lens) {
+  await gladys.publishCameraImage(idsOf(gladys, camera, lens).device, toCameraImage(jpeg));
 }
 
 // Application-level status of the Configuration screen: connected when every
@@ -131,11 +131,11 @@ manager.on('detection', (camera, { kind, active, isNew }) => {
   refreshWidgets(gladys);
 });
 
-manager.on('image', (camera, jpeg) => {
+manager.on('image', (camera, jpeg, lens) => {
   if (!connected || !camera.platformId) {
     return;
   }
-  background('publishCameraImage', publishImage(camera, jpeg));
+  background('publishCameraImage', publishImage(camera, jpeg, lens));
   refreshWidgets(gladys);
 });
 
@@ -156,11 +156,11 @@ gladys.onSetValue(async (device, feature, value) => {
 // frame plus a re-encoding.
 gladys.onGetImage(async (device) => {
   logger.info(`onGetImage <- ${device.external_id}`);
-  const camera = findCamera(gladys, manager, device);
-  if (!camera) {
+  const resolved = resolveDevice(gladys, manager, device);
+  if (!resolved) {
     throw new Error(`Unknown camera ${device.external_id}`);
   }
-  return toCameraImage(await camera.captureJpeg());
+  return toCameraImage(await resolved.camera.captureJpeg(resolved.lens));
 });
 
 // --- Manifest actions: buttons of the Configuration screen -------------------

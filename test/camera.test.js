@@ -6,12 +6,13 @@ import {
   CAMERA_MOVE,
   Camera,
   CameraManager,
+  LENSES,
   MAX_MOVE_SECONDS,
   detectionKind,
   platformIdOf,
 } from '../src/camera.js';
 import { normalizeConfig } from '../src/config.js';
-import { TINY_JPEG, createFakeCamera, flush, waitFor } from './helpers/fakeCamera.js';
+import { TINY_JPEG, createFakeCamera, flush, jpegOfSize, waitFor } from './helpers/fakeCamera.js';
 
 const baseConfig = (overrides = {}) =>
   normalizeConfig({
@@ -335,5 +336,108 @@ test('the manager stops the cameras removed from the config', async () => {
     );
   } finally {
     manager.stop();
+  }
+});
+
+// ffmpeg stand-in: answers which half it was asked for.
+async function cropEcho(args) {
+  const filter = args[args.indexOf('-vf') + 1];
+  return Buffer.from(filter.startsWith('crop=iw:ih/2:0:ih/2') ? 'BOTTOM' : 'TOP');
+}
+
+test('a stacked dual-lens frame is split: PTZ lens at the bottom, fixed on top', async () => {
+  const fake = createFakeCamera({ snapshot: jpegOfSize(2304, 2592) });
+  const camera = await onlineCamera(fake, baseConfig(), { runFfmpeg: cropEcho });
+  const layouts = [];
+  camera.on('layout', () => layouts.push(camera.dual));
+  try {
+    assert.equal(camera.dual, false, 'unknown until the first frame');
+    const images = await camera.captureAll();
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(images).map(([lens, jpeg]) => [lens, String(jpeg)])),
+      { [LENSES.MAIN]: 'BOTTOM', [LENSES.FIXED]: 'TOP' },
+    );
+    assert.equal(camera.dual, true);
+    assert.deepEqual(camera.lenses, [LENSES.MAIN, LENSES.FIXED]);
+    assert.deepEqual(layouts, [true], 'the layout change is announced once');
+    await camera.captureAll();
+    assert.deepEqual(layouts, [true]);
+    assert.equal(String(await camera.captureJpeg(LENSES.FIXED)), 'TOP');
+    assert.equal(fake.received(MESSAGES.SNAPSHOT).length, 3, 'one frame per capture');
+  } finally {
+    camera.stop();
+  }
+});
+
+test('the PTZ-on-top layout swaps the halves, and "off" keeps one image', async () => {
+  const fake = createFakeCamera({ snapshot: jpegOfSize(2304, 2592) });
+  const swapped = await onlineCamera(fake, baseConfig({ dual_lens: 'ptz_top' }), {
+    runFfmpeg: cropEcho,
+  });
+  try {
+    const images = await swapped.captureAll();
+    assert.equal(String(images[LENSES.MAIN]), 'TOP');
+    assert.equal(String(images[LENSES.FIXED]), 'BOTTOM');
+  } finally {
+    swapped.stop();
+  }
+
+  const single = await onlineCamera(fake, baseConfig({ dual_lens: 'off' }), {
+    runFfmpeg: async () => assert.fail('a small uncropped image needs no ffmpeg'),
+  });
+  try {
+    const images = await single.captureAll();
+    assert.deepEqual(Object.keys(images), [LENSES.MAIN]);
+    assert.equal(single.dual, false);
+    await assert.rejects(single.captureJpeg(LENSES.FIXED), /no fixed lens/);
+  } finally {
+    single.stop();
+  }
+});
+
+test('a single-lens frame stays one image', async () => {
+  const fake = createFakeCamera({ snapshot: jpegOfSize(2560, 1440) });
+  const camera = await onlineCamera(fake);
+  try {
+    const images = await camera.captureAll();
+    assert.deepEqual(Object.keys(images), [LENSES.MAIN]);
+    assert.equal(camera.dual, false);
+  } finally {
+    camera.stop();
+  }
+});
+
+test('the manager remembers a dual-lens camera, so it keeps both devices offline', async () => {
+  const saved = [];
+  const fake = createFakeCamera({ snapshot: jpegOfSize(2304, 2592) });
+  const manager = new CameraManager({
+    ...depsFor(fake, { runFfmpeg: cropEcho }),
+    loadKnown: async () => ({}),
+    saveKnown: async (known) => saved.push(structuredClone(known)),
+  });
+  let identified = 0;
+  manager.on('identified', () => {
+    identified += 1;
+  });
+  try {
+    await manager.apply(baseConfig());
+    await waitFor(() => identified === 1);
+    await manager.all()[0].captureAll();
+    assert.equal(identified, 2, 'the new lens layout re-publishes the devices');
+    assert.equal(saved.at(-1)['192.168.1.50:34567'].dual, true);
+  } finally {
+    manager.stop();
+  }
+
+  const offline = new CameraManager({
+    ...depsFor(createFakeCamera({ reachable: false })),
+    loadKnown: async () => saved.at(-1),
+    saveKnown: async () => {},
+  });
+  try {
+    await offline.apply(baseConfig());
+    assert.equal(offline.identified()[0].dual, true);
+  } finally {
+    offline.stop();
   }
 });

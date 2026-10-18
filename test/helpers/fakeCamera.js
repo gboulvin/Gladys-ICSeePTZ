@@ -25,6 +25,22 @@ export const TINY_JPEG = Buffer.from(
   'base64',
 );
 
+/**
+ * A JPEG header announcing a given size (enough for jpegSize, never decoded):
+ * the fake firmware snapshot of a dual-lens model is 2304x2592.
+ */
+export function jpegOfSize(width, height) {
+  const sof = Buffer.from([0xff, 0xc0, 0x00, 0x11, 0x08, 0, 0, 0, 0, 0x03]);
+  sof.writeUInt16BE(height, 5);
+  sof.writeUInt16BE(width, 7);
+  return Buffer.concat([
+    Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00]),
+    sof,
+    Buffer.alloc(9),
+    Buffer.from([0xff, 0xd9]),
+  ]);
+}
+
 const SESSION = 0x1a;
 
 /**

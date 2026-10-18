@@ -13,6 +13,7 @@ export function stubCamera({
   model = 'IPC-PTZ-3MP',
   online = true,
   withImage = true,
+  dual = false,
 } = {}) {
   const calls = [];
   return {
@@ -24,7 +25,14 @@ export function stubCamera({
     platformId: platformIdOf(serial),
     info: { serial, model, firmware: 'V5.00' },
     detection: { active: false, kind: null, at: null },
-    lastImage: withImage ? { jpeg: TINY_JPEG, hash: '0123456789', at: new Date() } : null,
+    dual,
+    lenses: dual ? ['main', 'fixed'] : ['main'],
+    lastImages: withImage
+      ? {
+          main: { jpeg: TINY_JPEG, hash: '0123456789', at: new Date() },
+          ...(dual ? { fixed: { jpeg: TINY_JPEG, hash: 'abcdef0123', at: new Date() } } : {}),
+        }
+      : {},
     calls,
     async move(move, seconds) {
       calls.push(['move', move, seconds]);
@@ -42,9 +50,13 @@ export function stubCamera({
     async reboot() {
       calls.push(['reboot']);
     },
-    async captureJpeg() {
-      calls.push(['captureJpeg']);
+    async captureJpeg(lens = 'main') {
+      calls.push(['captureJpeg', lens]);
       return TINY_JPEG;
+    },
+    async captureAll() {
+      calls.push(['captureAll']);
+      return dual ? { main: TINY_JPEG, fixed: TINY_JPEG } : { main: TINY_JPEG };
     },
   };
 }

@@ -40,18 +40,19 @@ d'internet.
 
 Ouvrez **Intégrations → iCSee PTZ → Configuration** :
 
-| Champ                   | À saisir                                                                                                         |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Adresses des caméras    | Les adresses IP, séparées par des virgules : `192.168.1.50, 192.168.1.51`. Ajoutez `:port` s'il n'est pas 34567. |
-| Nom d'utilisateur       | `admin`, sauf si vous avez créé un autre compte.                                                                 |
-| Mot de passe            | Le mot de passe de l'appareil dans l'application iCSee. Vide s'il n'y en a pas. Commun à toutes les caméras.     |
-| Rafraîchissement (s)    | Secondes entre deux images envoyées à Gladys (60 par défaut, 5 minimum). `0` = seulement à la demande.           |
-| Capture de l'image      | `Automatique` utilise la capture de la caméra, ou le flux RTSP si le firmware n'en a pas.                        |
-| Pas de déplacement (s)  | Durée de rotation d'une commande de déplacement isolée (1 s par défaut).                                         |
-| Vitesse du moteur (1-8) | Vitesse des moteurs PTZ.                                                                                         |
-| Zoom motorisé           | À cocher uniquement si votre modèle a un zoom optique.                                                           |
-| Presets                 | Les positions enregistrées sur les caméras, sous la forme `numéro:nom` : `1:Entrée, 2:Jardin`.                   |
-| Détection de mouvement  | Reçoit les détections des caméras.                                                                               |
+| Champ                     | À saisir                                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Adresses des caméras      | Les adresses IP, séparées par des virgules : `192.168.1.50, 192.168.1.51`. Ajoutez `:port` s'il n'est pas 34567. |
+| Nom d'utilisateur         | `admin`, sauf si vous avez créé un autre compte.                                                                 |
+| Mot de passe              | Le mot de passe de l'appareil dans l'application iCSee. Vide s'il n'y en a pas. Commun à toutes les caméras.     |
+| Rafraîchissement (s)      | Secondes entre deux images envoyées à Gladys (60 par défaut, 5 minimum). `0` = seulement à la demande.           |
+| Capture de l'image        | `Automatique` utilise la capture de la caméra, ou le flux RTSP si le firmware n'en a pas.                        |
+| Pas de déplacement (s)    | Durée de rotation d'une commande de déplacement isolée (1 s par défaut).                                         |
+| Vitesse du moteur (1-8)   | Vitesse des moteurs PTZ.                                                                                         |
+| Zoom motorisé             | À cocher uniquement si votre modèle a un zoom optique.                                                           |
+| Presets                   | Les positions enregistrées sur les caméras, sous la forme `numéro:nom` : `1:Entrée, 2:Jardin`.                   |
+| Détection de mouvement    | Reçoit les détections des caméras.                                                                               |
+| Caméras à double objectif | Découpe l'image des modèles à double objectif (objectif fixe en haut par défaut).                                |
 
 Enregistrez, puis utilisez les boutons :
 
@@ -82,6 +83,33 @@ caméras.
 
 Quelle que soit son origine, un mouvement s'arrête toujours de lui-même au
 bout de 5 secondes au plus.
+
+## Caméras à double objectif
+
+Certains modèles (X6E-WEQ...) ont un objectif fixe et un objectif PTZ, mais
+envoient les deux dans **une seule image**, l'un au-dessus de l'autre :
+l'application iCSee la découpe sur le téléphone. L'intégration fait de même,
+automatiquement : une image plus haute que large est une image à double
+objectif.
+
+- L'appareil caméra que vous avez déjà devient l'**objectif PTZ** (image,
+  flèches, presets, mouvement) : vos scènes et tableaux de bord continuent
+  de fonctionner.
+- Un second appareil, **« objectif fixe »** (« fixed lens »), apparaît dans
+  l'onglet Découverte avec l'image de l'objectif fixe : ajoutez-le comme le
+  premier.
+- Une seule capture alimente les deux images : le découpage ne coûte rien de
+  plus qu'aujourd'hui.
+
+Le réglage **Caméras à double objectif** indique où se trouve l'objectif
+fixe (en haut par défaut, ou en bas) ou désactive le découpage.
+
+La vidéo en direct n'est pas disponible avec cette intégration (les
+intégrations externes de Gladys échangent des images fixes, 12 par minute au
+plus). Pour le direct, ajoutez aussi la caméra à l'intégration **Caméra
+RTSP** de Gladys, avec
+`rtsp://<adresse>:554/user=admin&password=<mot de passe>&channel=1&stream=0.sdp?real_stream`
+(les deux objectifs dans une seule image).
 
 ## Presets
 

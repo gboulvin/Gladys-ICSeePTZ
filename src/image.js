@@ -91,19 +91,35 @@ export function redact(text) {
     .replace(/user=[^&\s]*/gi, 'user=***');
 }
 
+// ffmpeg crop filter of each half of a stacked dual-lens frame.
+const CROPS = {
+  top: 'crop=iw:ih/2:0:0',
+  bottom: 'crop=iw:ih/2:0:ih/2',
+};
+
 /**
- * Make a JPEG fit `maxBytes`, re-encoding it smaller when needed.
+ * Make a JPEG fit `maxBytes`, re-encoding it smaller when needed. With
+ * `crop`, keep only one half of a stacked dual-lens frame: the crop and the
+ * resize share the same ffmpeg run, so splitting costs no extra pass.
  * @param {Buffer} jpeg
  * @param {object} [options]
+ * @param {'top'|'bottom'} [options.crop]
  * @param {number} [options.maxBytes]
  * @param {Function} [options.runFfmpeg]
  * @returns {Promise<Buffer>}
  */
-export async function fitJpeg(jpeg, { maxBytes = MAX_JPEG_BYTES, runFfmpeg = spawnFfmpeg } = {}) {
-  if (jpeg.length <= maxBytes) {
+export async function fitJpeg(
+  jpeg,
+  { crop, maxBytes = MAX_JPEG_BYTES, runFfmpeg = spawnFfmpeg } = {},
+) {
+  if (!crop && jpeg.length <= maxBytes) {
     return jpeg;
   }
+  if (crop && !CROPS[crop]) {
+    throw new Error(`Unknown crop ${crop}`);
+  }
   for (const { width, quality } of ATTEMPTS) {
+    const filters = [...(crop ? [CROPS[crop]] : []), `scale='min(${width},iw)':-2`];
     const resized = await runFfmpeg(
       [
         '-f',
@@ -111,7 +127,7 @@ export async function fitJpeg(jpeg, { maxBytes = MAX_JPEG_BYTES, runFfmpeg = spa
         '-i',
         'pipe:0',
         '-vf',
-        `scale='min(${width},iw)':-2`,
+        filters.join(','),
         '-q:v',
         String(quality),
         '-frames:v',
@@ -129,6 +145,49 @@ export async function fitJpeg(jpeg, { maxBytes = MAX_JPEG_BYTES, runFfmpeg = spa
     }
   }
   throw new Error(`The image does not fit in ${Math.round(maxBytes / 1024)} KB`);
+}
+
+// JPEG start-of-frame markers (baseline, progressive...): they carry the size.
+const SOF_MARKERS = new Set([
+  0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf,
+]);
+
+/**
+ * Pixel size of a JPEG, read from its start-of-frame segment (no decoding).
+ * @param {Buffer} jpeg
+ * @returns {{ width: number, height: number }|null}
+ */
+export function jpegSize(jpeg) {
+  if (jpeg.length < 4 || jpeg[0] !== 0xff || jpeg[1] !== 0xd8) {
+    return null;
+  }
+  let offset = 2;
+  while (offset + 9 < jpeg.length) {
+    if (jpeg[offset] !== 0xff) {
+      return null;
+    }
+    const marker = jpeg[offset + 1];
+    if (marker === 0xff) {
+      offset += 1; // fill byte
+      continue;
+    }
+    const length = jpeg.readUInt16BE(offset + 2);
+    if (SOF_MARKERS.has(marker)) {
+      return { height: jpeg.readUInt16BE(offset + 5), width: jpeg.readUInt16BE(offset + 7) };
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
+/**
+ * Is this frame two 16:9-ish lenses stacked (taller than wide)? A single
+ * lens camera is always wider than tall; the dual-lens iCSee models stream
+ * both lenses in one frame, e.g. 2304x2592 = two 2304x1296.
+ * @param {{ width: number, height: number }|null} size
+ */
+export function isStackedDualLens(size) {
+  return Boolean(size) && size.height > size.width;
 }
 
 /**

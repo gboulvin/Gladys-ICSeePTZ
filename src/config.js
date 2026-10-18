@@ -35,7 +35,13 @@ export const DEFAULT_CONFIG = {
   presets: '',
   // Subscribe to the motion / person detection events of the cameras.
   motion_events: true,
+  // Dual-lens models stream both lenses stacked in one frame: split it into
+  // a fixed-lens device and the PTZ device. 'fixed_top' (detected by the
+  // frame shape, fixed lens on top), 'ptz_top', or 'off' (one device).
+  dual_lens: 'fixed_top',
 };
+
+export const DUAL_LENS_LAYOUTS = ['fixed_top', 'ptz_top', 'off'];
 
 export const SNAPSHOT_SOURCES = ['auto', 'dvrip', 'rtsp'];
 
@@ -143,6 +149,9 @@ export function normalizeConfig(raw = {}) {
     ptz_speed: Math.round(toNumber(merged.ptz_speed, 'ptz_speed')),
     motion_events: merged.motion_events !== false && merged.motion_events !== 'false',
     zoom: merged.zoom === true || merged.zoom === 'true',
+    dual_lens: DUAL_LENS_LAYOUTS.includes(merged.dual_lens)
+      ? merged.dual_lens
+      : DEFAULT_CONFIG.dual_lens,
     // Derived values.
     cameras,
     invalidHosts: invalid,

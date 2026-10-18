@@ -10,6 +10,14 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Dual-lens cameras (X6E-WEQ...): the image holding both lenses, one above
+  the other, is detected and split. The camera device becomes the PTZ lens,
+  and a new "fixed lens" device carries the image of the fixed lens. The
+  "Dual-lens cameras" setting says where the fixed lens is, or turns the split
+  off. One capture feeds both images.
+
 ## [1.1.0] - 2026-10-18
 
 ### Fixed

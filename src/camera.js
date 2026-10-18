@@ -11,9 +11,9 @@
 // Manager events:
 //   'online'    (camera)                     session (re)opened
 //   'offline'   (camera, error)              session lost
-//   'identified'(camera)                     serial learnt or address changed
+//   'identified'(camera)                     serial learnt, address or lens layout changed
 //   'detection' (camera, { kind, active, isNew })
-//   'image'     (camera, jpeg)               periodic image captured
+//   'image'     (camera, jpeg, lens)         periodic image captured, per lens
 // -----------------------------------------------------------------------------
 
 import { EventEmitter } from 'node:events';
@@ -21,7 +21,7 @@ import { createHash } from 'node:crypto';
 import { createLogger } from '@gladysassistant/integration-sdk';
 import { DvripClient, DvripError } from './dvrip/client.js';
 import { PTZ_COMMANDS } from './dvrip/protocol.js';
-import { captureRtspFrame, fitJpeg, spawnFfmpeg } from './image.js';
+import { captureRtspFrame, fitJpeg, isStackedDualLens, jpegSize, spawnFfmpeg } from './image.js';
 import { loadKnownCameras, saveKnownCameras } from './store.js';
 
 const logger = createLogger({ name: 'camera' });
@@ -55,6 +55,10 @@ export const DIRECTIONS = {
   zoom_in: CAMERA_MOVE.ZOOM_IN,
   zoom_out: CAMERA_MOVE.ZOOM_OUT,
 };
+
+// The lenses of a camera. Every camera has the main one (the whole frame, or
+// the PTZ half of a dual-lens frame); the dual-lens models add the fixed one.
+export const LENSES = { MAIN: 'main', FIXED: 'fixed' };
 
 // Hard ceiling of any move, whatever asks for it (PTZ spec: ~5 s).
 export const MAX_MOVE_SECONDS = 5;
@@ -116,7 +120,8 @@ export class Camera extends EventEmitter {
     this.lastError = null;
     this.info = null; // { serial, model, firmware, hardware }
     this.known = null; // identity remembered in /data
-    this.lastImage = null; // { jpeg, hash, at }
+    this.lastImages = {}; // by lens: { jpeg, hash, at }
+    this.dualDetected = null; // null until the first frame tells
     this.detection = { active: false, kind: null, at: null };
     this.detectionTimer = null;
     this.activeMove = null; // { command, timer, done }
@@ -143,6 +148,24 @@ export class Camera extends EventEmitter {
 
   get platformId() {
     return this.serial ? platformIdOf(this.serial) : null;
+  }
+
+  /** Is the frame split into a fixed lens and a PTZ lens? */
+  get dual() {
+    if (this.config.dual_lens === 'off') {
+      return false;
+    }
+    return this.dualDetected ?? this.known?.dual === true;
+  }
+
+  /** The lenses published to Gladys. */
+  get lenses() {
+    return this.dual ? [LENSES.MAIN, LENSES.FIXED] : [LENSES.MAIN];
+  }
+
+  /** Latest image of the main lens. */
+  get lastImage() {
+    return this.lastImages[LENSES.MAIN] ?? null;
   }
 
   start() {
@@ -366,11 +389,25 @@ export class Camera extends EventEmitter {
   // --- Images ---------------------------------------------------------------
 
   /**
-   * Capture a JPEG that fits the Gladys camera image limit. Concurrent calls
-   * share the same capture.
+   * Capture a JPEG of one lens that fits the Gladys camera image limit.
+   * Concurrent calls share the same capture: one frame from the camera feeds
+   * both lenses of a dual-lens model.
+   * @param {string} [lens] one of LENSES
    * @returns {Promise<Buffer>}
    */
-  captureJpeg() {
+  async captureJpeg(lens = LENSES.MAIN) {
+    const images = await this.captureAll();
+    if (!images[lens]) {
+      throw new Error(`${this.host} has no ${lens} lens`);
+    }
+    return images[lens];
+  }
+
+  /**
+   * Capture every lens from one frame.
+   * @returns {Promise<Record<string, Buffer>>} by lens
+   */
+  captureAll() {
     if (!this.capturing) {
       this.capturing = this.doCapture().finally(() => {
         this.capturing = null;
@@ -380,30 +417,54 @@ export class Camera extends EventEmitter {
   }
 
   async doCapture() {
-    const source = this.config.snapshot_source;
-    let jpeg;
-    if (source === 'rtsp' || (source === 'auto' && this.snapshotUnsupported)) {
-      jpeg = await this.captureRtsp();
-    } else {
-      try {
-        jpeg = await this.requireClient().snapshot();
-      } catch (err) {
-        if (source !== 'auto' || !(err instanceof DvripError)) {
-          throw err;
-        }
-        // The firmware has no snapshot command: RTSP from now on.
-        logger.info(`${this.host}: ${err.message}, using the RTSP stream`);
-        this.snapshotUnsupported = true;
-        jpeg = await this.captureRtsp();
+    const frame = await this.captureFrame();
+    const stacked = isStackedDualLens(jpegSize(frame));
+    if (this.config.dual_lens !== 'off' && stacked !== this.dualDetected) {
+      const changed = stacked !== this.dual;
+      this.dualDetected = stacked;
+      if (changed) {
+        logger.info(`${this.host}: ${stacked ? 'dual-lens frame, split in two' : 'single lens'}`);
+        this.emit('layout');
       }
     }
-    const fitted = await fitJpeg(jpeg, { runFfmpeg: this.runFfmpeg });
-    this.lastImage = {
-      jpeg: fitted,
-      hash: createHash('sha1').update(fitted).digest('hex').slice(0, 10),
-      at: new Date(),
-    };
-    return fitted;
+    const crops = {};
+    if (this.dual) {
+      const ptzOnTop = this.config.dual_lens === 'ptz_top';
+      crops[LENSES.MAIN] = ptzOnTop ? 'top' : 'bottom';
+      crops[LENSES.FIXED] = ptzOnTop ? 'bottom' : 'top';
+    } else {
+      crops[LENSES.MAIN] = undefined;
+    }
+    const images = {};
+    for (const [lens, crop] of Object.entries(crops)) {
+      const jpeg = await fitJpeg(frame, { crop, runFfmpeg: this.runFfmpeg });
+      images[lens] = jpeg;
+      this.lastImages[lens] = {
+        jpeg,
+        hash: createHash('sha1').update(jpeg).digest('hex').slice(0, 10),
+        at: new Date(),
+      };
+    }
+    return images;
+  }
+
+  // One raw frame: firmware snapshot, or the RTSP stream.
+  async captureFrame() {
+    const source = this.config.snapshot_source;
+    if (source === 'rtsp' || (source === 'auto' && this.snapshotUnsupported)) {
+      return this.captureRtsp();
+    }
+    try {
+      return await this.requireClient().snapshot();
+    } catch (err) {
+      if (source !== 'auto' || !(err instanceof DvripError)) {
+        throw err;
+      }
+      // The firmware has no snapshot command: RTSP from now on.
+      logger.info(`${this.host}: ${err.message}, using the RTSP stream`);
+      this.snapshotUnsupported = true;
+      return this.captureRtsp();
+    }
   }
 
   captureRtsp() {
@@ -421,8 +482,10 @@ export class Camera extends EventEmitter {
     }
     const tick = async () => {
       try {
-        const jpeg = await this.captureJpeg();
-        this.emit('image', jpeg);
+        const images = await this.captureAll();
+        for (const [lens, jpeg] of Object.entries(images)) {
+          this.emit('image', jpeg, lens);
+        }
       } catch (err) {
         logger.warn(`${this.host}: image capture failed (${err.message})`);
       }
@@ -536,13 +599,26 @@ export class CameraManager extends EventEmitter {
     });
     camera.on('offline', (reason) => this.emit('offline', camera, reason));
     camera.on('detection', (detection) => this.emit('detection', camera, detection));
-    camera.on('image', (jpeg) => this.emit('image', camera, jpeg));
+    camera.on('image', (jpeg, lens) => this.emit('image', camera, jpeg, lens));
+    // A dual-lens frame (or its end) adds or removes the fixed-lens device.
+    camera.on('layout', () => this.remember(camera));
   }
 
   remember(camera) {
-    const entry = { serial: camera.info.serial, model: camera.info.model ?? undefined };
+    if (!camera.serial) {
+      return;
+    }
     const previous = this.known[camera.key];
-    if (previous?.serial === entry.serial && previous?.model === entry.model) {
+    const dual = camera.dualDetected ?? previous?.dual === true;
+    const entry = { serial: camera.serial, model: camera.model ?? undefined };
+    if (dual) {
+      entry.dual = true;
+    }
+    if (
+      previous?.serial === entry.serial &&
+      previous?.model === entry.model &&
+      (previous?.dual === true) === dual
+    ) {
       return;
     }
     // The same camera at a new address (DHCP): forget the old one.

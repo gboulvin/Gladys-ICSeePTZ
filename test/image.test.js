@@ -5,11 +5,13 @@ import {
   MAX_JPEG_BYTES,
   captureRtspFrame,
   fitJpeg,
+  isStackedDualLens,
+  jpegSize,
   redact,
   rtspUrl,
   toCameraImage,
 } from '../src/image.js';
-import { TINY_JPEG } from './helpers/fakeCamera.js';
+import { TINY_JPEG, jpegOfSize } from './helpers/fakeCamera.js';
 
 test('a JPEG of MAX_JPEG_BYTES makes a camera image within the 150 KB limit', () => {
   const image = toCameraImage(Buffer.alloc(MAX_JPEG_BYTES));
@@ -65,4 +67,27 @@ test('captureRtspFrame asks ffmpeg for one frame of the sub-stream', async () =>
   assert.equal(jpeg, TINY_JPEG);
   assert.ok(received.includes('-frames:v'));
   assert.ok(received.some((arg) => arg.includes('stream=1.sdp')));
+});
+
+test('jpegSize reads the frame size without decoding, and spots a stacked dual-lens frame', () => {
+  assert.deepEqual(jpegSize(jpegOfSize(2304, 2592)), { width: 2304, height: 2592 });
+  assert.deepEqual(jpegSize(TINY_JPEG), { width: 1, height: 1 });
+  assert.equal(jpegSize(Buffer.from('not a jpeg')), null);
+  assert.equal(isStackedDualLens({ width: 2304, height: 2592 }), true);
+  assert.equal(isStackedDualLens({ width: 2560, height: 1440 }), false);
+  assert.equal(isStackedDualLens(null), false);
+});
+
+test('fitJpeg crops one half in the same ffmpeg pass, even for a small image', async () => {
+  const calls = [];
+  const runFfmpeg = async (args) => {
+    calls.push(args[args.indexOf('-vf') + 1]);
+    return TINY_JPEG;
+  };
+  await fitJpeg(TINY_JPEG, { crop: 'top', runFfmpeg });
+  await fitJpeg(TINY_JPEG, { crop: 'bottom', runFfmpeg });
+  assert.equal(calls.length, 2, 'one ffmpeg run per half');
+  assert.match(calls[0], /^crop=iw:ih\/2:0:0,scale=/);
+  assert.match(calls[1], /^crop=iw:ih\/2:0:ih\/2,scale=/);
+  await assert.rejects(fitJpeg(TINY_JPEG, { crop: 'left', runFfmpeg }), /Unknown crop/);
 });

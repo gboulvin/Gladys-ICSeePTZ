@@ -246,6 +246,53 @@
       "default": ""
     },
     {
+      "key": "dual_lens",
+      "type": "select",
+      "label": {
+        "en": "Dual-lens cameras",
+        "fr": "Caméras à double objectif",
+        "de": "Kameras mit Doppelobjektiv",
+        "es": "Cámaras de doble objetivo"
+      },
+      "description": {
+        "en": "Dual-lens models send both lenses in one image, one above the other (detected automatically: the image is taller than wide). The integration splits it into two devices: the PTZ lens and the fixed lens.",
+        "fr": "Les modèles à double objectif envoient les deux objectifs dans une seule image, l'un au-dessus de l'autre (détecté automatiquement : l'image est plus haute que large). L'intégration la découpe en deux appareils : l'objectif PTZ et l'objectif fixe.",
+        "de": "Modelle mit Doppelobjektiv senden beide Objektive in einem Bild übereinander (automatisch erkannt: das Bild ist höher als breit). Die Integration teilt es in zwei Geräte: das PTZ-Objektiv und das feste Objektiv.",
+        "es": "Los modelos de doble objetivo envían ambos objetivos en una sola imagen, uno encima del otro (detectado automáticamente: la imagen es más alta que ancha). La integración la divide en dos dispositivos: el objetivo PTZ y el objetivo fijo."
+      },
+      "required": false,
+      "default": "fixed_top",
+      "options": [
+        {
+          "value": "fixed_top",
+          "label": {
+            "en": "Split, fixed lens on top",
+            "fr": "Découper, objectif fixe en haut",
+            "de": "Teilen, festes Objektiv oben",
+            "es": "Dividir, objetivo fijo arriba"
+          }
+        },
+        {
+          "value": "ptz_top",
+          "label": {
+            "en": "Split, PTZ lens on top",
+            "fr": "Découper, objectif PTZ en haut",
+            "de": "Teilen, PTZ-Objektiv oben",
+            "es": "Dividir, objetivo PTZ arriba"
+          }
+        },
+        {
+          "value": "off",
+          "label": {
+            "en": "Do not split",
+            "fr": "Ne pas découper",
+            "de": "Nicht teilen",
+            "es": "No dividir"
+          }
+        }
+      ]
+    },
+    {
       "key": "motion_events",
       "type": "boolean",
       "label": {

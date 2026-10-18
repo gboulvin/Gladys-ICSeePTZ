@@ -51,6 +51,7 @@ Abra **Integraciones → iCSee PTZ → Configuración**:
 | Zoom motorizado                | Márquelo solo si su modelo tiene zoom óptico.                                                          |
 | Presets                        | Las posiciones guardadas en las cámaras, como `número:nombre`: `1:Entrada, 2:Jardín`.                  |
 | Detección de movimiento        | Recibe las detecciones de las cámaras.                                                                 |
+| Cámaras de doble objetivo      | Divide la imagen de los modelos de doble objetivo (objetivo fijo arriba por defecto).                  |
 
 Guarde y use los botones:
 
@@ -79,6 +80,31 @@ Después abra la pestaña **Detección** de la integración y añada sus cámara
 
 Venga de donde venga, un movimiento siempre se detiene solo como mucho a los
 5 segundos.
+
+## Cámaras de doble objetivo
+
+Algunos modelos (X6E-WEQ...) tienen un objetivo fijo y un objetivo PTZ, pero
+envían ambos en **una sola imagen**, uno encima del otro: la app iCSee la
+divide en el teléfono. La integración hace lo mismo, automáticamente: una
+imagen más alta que ancha es una imagen de doble objetivo.
+
+- El dispositivo de cámara que ya tiene pasa a ser el **objetivo PTZ**
+  (imagen, flechas, presets, movimiento): sus escenas y paneles siguen
+  funcionando.
+- Un segundo dispositivo, **«fixed lens»** (objetivo fijo), aparece en la
+  pestaña Detección con la imagen del objetivo fijo: añádalo como el primero.
+- Una sola captura alimenta las dos imágenes: dividirla no cuesta más que
+  hoy.
+
+El ajuste **Cámaras de doble objetivo** indica dónde está el objetivo fijo
+(arriba por defecto, o abajo) o desactiva la división.
+
+El vídeo en directo no está disponible con esta integración (las
+integraciones externas de Gladys intercambian imágenes fijas, 12 por minuto
+como máximo). Para el directo, añada también la cámara a la integración
+**Cámara RTSP** de Gladys, con
+`rtsp://<dirección>:554/user=admin&password=<contraseña>&channel=1&stream=0.sdp?real_stream`
+(ambos objetivos en una sola imagen).
 
 ## Presets
 
