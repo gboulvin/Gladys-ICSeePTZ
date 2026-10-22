@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-22
+
 ### Security
 
 - `brace-expansion`, pulled in by ESLint, raised to 5.0.12 against the
@@ -70,7 +72,8 @@ the notes of the version's GitHub Release.
 - English, French, German and Spanish texts and user documentation.
 - `SECURITY.md`, `CLAUDE.md`, CI on Node 22 and 24, release workflows.
 
-[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/releases/tag/v1.0.0
