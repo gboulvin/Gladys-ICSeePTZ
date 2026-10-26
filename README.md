@@ -23,7 +23,7 @@ protocol: no cloud account, no internet connection.
 User documentation: [English](docs/en.md) · [Français](docs/fr.md) ·
 [Deutsch](docs/de.md) · [Español](docs/es.md).
 
-Requires **Gladys 5.1.0** or later (scene triggers, scene actions and
+Requires **Gladys 5.3.0** or later (catalog keywords, scene triggers, scene actions and
 widgets).
 
 ## Install
