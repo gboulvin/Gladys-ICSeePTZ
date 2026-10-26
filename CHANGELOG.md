@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-26
+
 ### Changed
 
 - Requires Gladys 5.3.0 or later: the manifest declares search keywords for
@@ -78,7 +80,8 @@ the notes of the version's GitHub Release.
 - English, French, German and Spanish texts and user documentation.
 - `SECURITY.md`, `CLAUDE.md`, CI on Node 22 and 24, release workflows.
 
-[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/gboulvin/Gladys-ICSeePTZ/compare/v1.0.0...v1.1.0
